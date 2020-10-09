@@ -1,0 +1,1074 @@
+
+"""
+Simple game for learning arcade
+"""
+
+import arcade
+import numpy as np
+import time
+import sys
+import time
+import copy
+import requests
+import requests
+import json
+import LingQapi as lingqapi
+#import ctypes 
+
+#=====================================================================================
+
+
+#user32 = ctypes.windll.user32
+#SCREEN_WIDTH = user32.GetSystemMetrics(0)
+#SCREEN_HEIGHT = user32.GetSystemMetrics(1) 
+
+# Some basic values for the window
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 800
+SCREEN_TITLE = "Colin's LingQ Reader"
+FULLSCREEN = False
+
+# Margins
+MARGIN_WIDTH = SCREEN_WIDTH/40.0
+MARGIN_HEIGHT = SCREEN_HEIGHT/25.0
+
+# Line spacing and paragraph stuff
+LINE_SPACE = 30
+PARAGRAPH_SPACE = int(LINE_SPACE*1.5)
+PARAGRAPH_STRING = '</p><p>'
+FONT_SIZE = 15
+
+# For additional space around word in highlighting
+LINGQ_WIDTH_FACTOR = 1.02
+LINGQ_HEIGHT_FACTOR = 1.15
+
+# Bubble properties
+BUBBLE_WIDTH = int(SCREEN_WIDTH/2.1)
+BUBBLE_HEIGHT = int(BUBBLE_WIDTH/1.8)
+BUBBLE_MARGIN = int(BUBBLE_WIDTH/20.0)
+FONT_SIZE_BUBBLE_TERM = 20
+FONT_SIZE_BUBBLE_HINT = 15
+BUBBLE_HINT_SPACING = 30
+BUBBLE_STATUS_WIDTH = int(min(50,(BUBBLE_WIDTH-2*BUBBLE_MARGIN)/6.0))
+BUBBLE_STATUS_HEIGHT = BUBBLE_STATUS_WIDTH
+
+# Colors 
+LINGQ_HIGHLIGHT_COLOR_1 = (255,255,0,255)
+LINGQ_HIGHLIGHT_COLOR_2 = (255,255,0,120)
+LINGQ_HIGHLIGHT_COLOR_3 = (255,255,0,55)
+LINGQ_HIGHLIGHT_COLOR_4 = (255,255,0,0)
+LINGQ_BUBBLE_COLOR = arcade.color.LIGHT_GOLDENROD_YELLOW
+LINGQ_BUBBLE_STATUS_COLOR = arcade.color.AZURE_MIST
+LINGQ_BUBBLE_STATUS_CURRENT_COLOR = arcade.color.BLUEBERRY
+UNKNOWN_HIGHLIGHT_COLOR = arcade.color.BLIZZARD_BLUE
+UNKNOWN_BUBBLE_COLOR = arcade.color.BLIZZARD_BLUE
+EXIT_BUTTON_COLOR = arcade.color.RED
+
+# Dictionary for saving text images
+text_images_save = {}
+lingq_images_save = {}
+unknown_images_save = {}
+
+
+#=====================================================================================
+
+class LingQReader(arcade.Window):
+  """
+  Main class
+  """
+  
+  #---------------------------------------------------------------
+  
+  def __init__(self):
+    global SCREEN_WIDTH , SCREEN_HEIGHT
+    
+    # Call the parent class initializer
+    super().__init__(SCREEN_WIDTH,SCREEN_HEIGHT,SCREEN_TITLE,fullscreen=FULLSCREEN)
+    
+    # Get new size if fullscreen
+    if FULLSCREEN:
+      SCREEN_WIDTH, SCREEN_HEIGHT = self.get_size()
+    
+    # Holds if already displayed text
+    self.Diplayed = None
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def setup(self):
+    
+    # Set background color
+    arcade.set_background_color(arcade.color.WHITE)
+    
+    # Set text to not displayed
+    self.Diplayed = False
+    
+    # Load full text
+    #self.text = ReadText("ExampleText.txt")
+    self.text = lingqapi.GetText()
+        
+    # Load LingQs in text
+    self.lingqsDict , self.lingqs = lingqapi.GetLingQs()
+    
+    # Load unknown words
+    self.unknownList = lingqapi.GetUnknownWords()
+    
+    # Setup text
+    self.page_word_list = self.setup_text()
+    self.nPages = len(self.page_word_list)
+    
+    # Setup LingQs and unknown
+    self.page_lingq_list = self.setup_lingqs()
+    self.page_unknown_list = self.setup_unknown()
+    
+    # Setup buttons on page
+    self.exit_button_list = self.setup_page_buttons()
+    
+    # Start on first page
+    self.nPageCurrent = 0
+    
+    # Assume no bubble to display
+    self.displayBubble = None
+    
+    # Assume not trying to exit
+    self.attemptExit = False
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def setup_text(self):
+    
+    # Start list of word lists for each page
+    page_word_list = []
+    
+    # Get list of words
+    words = self.text.split()
+    
+    # Position of first word
+    xLeft = MARGIN_WIDTH
+    yCenter = SCREEN_HEIGHT-MARGIN_HEIGHT
+    
+    # Width of page
+    space_image = get_text_image(text=' ')
+    SPACE_WIDTH = space_image.width
+    
+    # Make a first word list
+    word_list = arcade.SpriteList()
+    
+    # Start page counter
+    nPage = 0
+    
+    # Loop over all words in the text
+    for word in words:
+      
+      # Check if this word is a paragraph indicator
+      if word == PARAGRAPH_STRING:
+        xLeft = MARGIN_WIDTH
+        yCenter += -PARAGRAPH_SPACE
+        continue
+      
+      # Made image out of word
+      image = get_text_image(text=word)
+      
+      # Make sprite from image
+      word_sprite = WordSprite()
+      word_sprite.SetWord(word)
+      word_sprite._texture = arcade.Texture(word)
+      word_sprite.texture.image = image
+      word_sprite.width = image.width
+      word_sprite.height = image.height
+      
+      # Check if need to move to next line
+      word_right = xLeft + word_sprite.width
+      if ( word_right > SCREEN_WIDTH-MARGIN_WIDTH ):
+        xLeft = MARGIN_WIDTH
+        yCenter += -LINE_SPACE
+      
+      # Check if need to move to next page
+      if yCenter < MARGIN_HEIGHT:
+        
+        # Save this word list
+        page_word_list.append(word_list)
+        
+        # Start new word list
+        word_list = arcade.SpriteList()
+        
+        # Reset positions for next page
+        xLeft = MARGIN_WIDTH
+        yCenter = SCREEN_HEIGHT-MARGIN_HEIGHT
+      
+      # Set position of word
+      word_sprite.center_x = xLeft + word_sprite.width / 2
+      word_sprite.center_y = yCenter
+      
+      # Add word to word list
+      word_list.append(word_sprite)
+      
+      # Update x position
+      xLeft += word_sprite.width + SPACE_WIDTH
+    
+    # Add final page
+    page_word_list.append(word_list)
+    
+    return page_word_list
+    
+  #---------------------------------------------------------------
+  
+  def setup_lingqs(self):
+    
+    # Start list for sprite lists
+    page_lingq_list = []
+    
+    # Loop over pages and get linqs on each
+    for word_list in self.page_word_list:
+      
+      # Make sprite list for holding LingQs
+      lingq_list = arcade.SpriteList()
+      
+      # Loop over words in word_list and check each one against LingQs
+      for word_sprite in word_list.sprite_list:
+        
+        # Check if this is a LingQ
+        if word_sprite.word in self.lingqsDict:
+          
+          # Get the LingQ
+          index = self.lingqsDict[word_sprite.word]
+          lingq = self.lingqs[index]
+          
+          # Make image for this LingQ
+          image = get_lingq_image(text=word_sprite.wordRaw,status=lingq['status'],extended_status=lingq['extended_status'])
+          
+          # Make sprite for this LingQ
+          lingq_sprite = WordSprite()
+          lingq_sprite.SetWord(word_sprite.wordRaw)
+          lingq_sprite._texture = arcade.Texture(word_sprite.wordRaw)
+          lingq_sprite.texture.image = image
+          lingq_sprite.width = word_sprite.width*LINGQ_WIDTH_FACTOR
+          lingq_sprite.height = word_sprite.height*LINGQ_HEIGHT_FACTOR
+          lingq_sprite.center_x = word_sprite.center_x
+          lingq_sprite.center_y = word_sprite.center_y
+          
+          # Add this word as a LingQ
+          lingq_list.append(lingq_sprite)
+      
+      # Append this list to page_lingq_list
+      page_lingq_list.append(lingq_list)
+    
+    return page_lingq_list
+  
+  #---------------------------------------------------------------
+  
+  def setup_unknown(self):
+    
+    # Start list for sprite lists
+    page_unknown_list = []
+    
+    # Loop over pages and get linqs on each
+    for word_list in self.page_word_list:
+      
+      # Make sprite list for holding LingQs
+      unknown_list = arcade.SpriteList()
+      
+      # Loop over words in word_list and check each one against LingQs
+      for word_sprite in word_list.sprite_list:
+        
+        # Check if this is a LingQ
+        if word_sprite.word in self.unknownList:
+          
+          # Make image for this LingQ
+          image = get_unknown_image(text=word_sprite.wordRaw)
+          
+          # Make sprite for this LingQ
+          unknown_sprite = WordSprite()
+          unknown_sprite.SetWord(word_sprite.wordRaw)
+          unknown_sprite._texture = arcade.Texture(word_sprite.wordRaw)
+          unknown_sprite.texture.image = image
+          unknown_sprite.width = word_sprite.width*LINGQ_WIDTH_FACTOR
+          unknown_sprite.height = word_sprite.height*LINGQ_HEIGHT_FACTOR
+          unknown_sprite.center_x = word_sprite.center_x
+          unknown_sprite.center_y = word_sprite.center_y
+          
+          # Add this word as a LingQ
+          unknown_list.append(unknown_sprite)
+      
+      # Append this list to page_unknown_list
+      page_unknown_list.append(unknown_list)
+    
+    return page_unknown_list
+  
+  #---------------------------------------------------------------
+  
+  def setup_page_buttons(self):
+    
+    
+    # EXIT BUTTON
+    
+    # Make shape list for bubble
+    exit_button_list = arcade.ShapeElementList()
+    
+    # Main box
+    shape = arcade.create_rectangle_filled(SCREEN_WIDTH/10.0,SCREEN_HEIGHT-0.5*MARGIN_HEIGHT,SCREEN_WIDTH/5.0,MARGIN_HEIGHT,EXIT_BUTTON_COLOR)
+    exit_button_list.append(shape)
+    
+    ## Outline of box
+    #shape = arcade.create_rectangle_outline(self.xCenter,self.yCenter,self.width,self.height,arcade.color.BLACK,1)
+    #exit_button_list.append(shape)
+    #shape = arcade.create_rectangle_outline(self.xCenter,self.yCenter,self.width,self.height,arcade.color.BLACK,1,180.0)
+    #exit_button_list.append(shape)
+    
+    return exit_button_list
+  
+  #---------------------------------------------------------------
+  
+  def on_draw(self):
+    
+    # Start rendering
+    arcade.start_render()
+    
+    # Display unknown
+    self.page_unknown_list[self.nPageCurrent].draw()
+    
+    # Display LingQs
+    self.page_lingq_list[self.nPageCurrent].draw()
+    
+    # Display words
+    self.page_word_list[self.nPageCurrent].draw()
+    
+    # Display exit button if required
+    if self.attemptExit:
+      self.exit_button_list.draw()
+    
+    # Display bubble if there is one
+    if not self.displayBubble is None:
+      self.displayBubble.draw()
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def on_key_press(self,key,modifiers):
+    
+    # See if moving to next page
+    if key == arcade.key.RETURN:
+      self.nPageCurrent += 1
+    
+    # See if finished text
+    if self.nPageCurrent >= self.nPages:
+      sys.exit()
+    
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def on_mouse_press(self, x, y, button, modifiers):
+    
+    """Take mouse click, determine what to do."""
+    
+    # Assume initially clicked on blank space
+    clickObject = None
+    
+    # If bubble open, check for click in bubble if not found click
+    if clickObject is None:
+      if not self.displayBubble is None:
+        if self.displayBubble.ClickInBox(x,y):
+          
+          # Set clicked object identifier
+          clickObject = 'bubble'
+          
+          # Check if in a status box and get LingQ id to change status if is
+          inStatus = self.displayBubble.ClickInStatus(x,y)
+          if not inStatus is None:
+            idlingq = self.displayBubble.idLingQ()
+            termlingq = self.displayBubble.termLingQ()
+            print(idlingq,termlingq)
+            self.changeLingQstatus(idlingq,termlingq,inStatus)
+    
+    # Loop over LingQs on screen 
+    if clickObject is None:
+      for lingq_sprite in self.page_lingq_list[self.nPageCurrent]:
+          
+          # Check if click in box of word
+          if inBoxSprite(x,y,lingq_sprite):
+          
+            # Get LingQ
+            index = self.lingqsDict[lingq_sprite.word]
+            lingq = self.lingqs[index]
+            
+            # Get hints
+            hints = lingq['hints']
+            
+            # Update clickObject to hold LingQ
+            clickObject = 'lingq'
+            
+            # Make LingQ bubble
+            self.displayBubble = LingQBubble('lingq',lingq_sprite,lingq)
+      
+    # Loop over unknown words on screen if not found click
+    if clickObject is None:
+      for unknown_sprite in self.page_unknown_list[self.nPageCurrent]:
+        
+        # Check if click in box of word
+        if inBoxSprite(x,y,unknown_sprite):
+          
+          # Get unknown word
+          word = unknown_sprite.word
+          
+          # Update clickObject to hold unknown
+          clickObject = 'unknown'
+    
+    # Loop over all words on screen if not found click
+    if clickObject is None:
+      for word_sprite in self.page_word_list[self.nPageCurrent]:
+        
+        # Check if click in box of word
+        if inBoxSprite(x,y,word_sprite):
+        
+          # Get word
+          word = word_sprite.word
+          
+          # Update clickObject to hold LingQ
+          clickObject = 'word'
+    
+    # Check for clicking buttons
+    if clickObject is None:
+      
+      # Check for exit button
+      if clickedExit(x,y):
+        clickObject = 'exit'
+        if self.attemptExit:
+          sys.exit()
+        else:
+          self.attemptExit = True
+      
+      # Check for previous page
+      if clickedPreviousPage(x,y):
+        if self.nPageCurrent > 0:
+          self.nPageCurrent += -1
+          
+      # Check for next page
+      if clickedNextPage(x,y):
+        if self.nPageCurrent < self.nPages-1:
+          self.nPageCurrent += 1
+      
+      
+    # If the click was on nothing, make sure no bubble
+    if clickObject is None:
+      self.displayBubble = None
+    
+    # If the click was in a bubble, remove bubble
+    if clickObject == 'bubble':
+      self.displayBubble = None
+    
+    # If clicked on anything but exit button, make sure self.attemptExit is False
+    if not clickObject == 'exit':
+      self.attemptExit = False
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def changeLingQstatus(self,idlingq,termlingq,newstatus):
+    
+    """Takes LingQ id and changes the status."""
+    
+    # Holds if should delete LingQ
+    shouldDelete = False
+    
+    # Get status and extended status numbers to change LingQ to
+    if newstatus == 0:
+      new_status = 0
+      new_extended_status = 0
+    elif newstatus == 1:
+      new_status = 1
+      new_extended_status = 0
+    elif newstatus == 2:
+      new_status = 2
+      new_extended_status = 0
+    elif newstatus == 3:
+      new_status = 3
+      new_extended_status = 0
+    elif newstatus == 4:
+      new_status = 3
+      new_extended_status = 3
+    elif newstatus == 5:
+      shouldDelete = True
+      new_status = -1
+      new_extended_status = -1
+    
+    if shouldDelete:
+      print("Cannot delete LingQs yet")
+      return
+    
+    # Get index of this LingQ
+    index = self.lingqsDict[termlingq]
+    
+    # Stop if status change not necessary
+    if ( self.lingqs[index]['status'] == new_status ) and ( self.lingqs[index]['extended_status'] == new_extended_status ):
+      return
+    
+    # Change the status in LingQ list
+    self.lingqs[index]['status'] = new_status
+    self.lingqs[index]['extended_status'] = new_extended_status
+    
+    # Loop over all words and change images in text
+    for iPage in range(0,len(self.page_lingq_list)):
+      
+      # Start a new sprite list for this page
+      sprite_list_new = arcade.SpriteList()
+      
+      # Loop over LingQs on page
+      for iLingQ in range(0,len(self.page_lingq_list[iPage].sprite_list)):
+        
+        # Get Sprite for this LingQ
+        lingq_sprite = self.page_lingq_list[iPage].sprite_list[iLingQ]
+        
+        # Check if this is one that should be changed
+        if lingq_sprite.word == termlingq:
+          
+          # Make a new image for this LingQ
+          image = get_lingq_image(lingq_sprite.wordRaw,new_status,new_extended_status)
+          
+          # Make sprite for this LingQ
+          lingq_spriteNew = WordSprite()
+          lingq_spriteNew.SetWord(lingq_sprite.wordRaw)
+          lingq_spriteNew._texture = arcade.Texture(lingq_sprite.wordRaw+str(new_status)+str(new_extended_status))
+          lingq_spriteNew.texture.image = image
+          lingq_spriteNew.width = lingq_sprite.width
+          lingq_spriteNew.height = lingq_sprite.height
+          lingq_spriteNew.center_x = lingq_sprite.center_x
+          lingq_spriteNew.center_y = lingq_sprite.center_y
+          
+          # Add new sprite to list
+          sprite_list_new.append(lingq_spriteNew)
+        
+        else:
+          
+          # No change needed so add old sprite to list
+          sprite_list_new.append(lingq_sprite)
+      
+      # Save the new sprite list
+      self.page_lingq_list[iPage] = sprite_list_new
+    
+    # Change status on LingQ
+    lingqapi.ChangeLingQStatus(idlingq,new_status,new_extended_status)
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def on_update(self,dt):
+    
+    return
+  
+  #---------------------------------------------------------------
+
+#=====================================================================================
+
+class WordSprite(arcade.Sprite):
+  
+  def SetWord(self,word):
+    self.wordRaw = word
+    self.word = GetBasicWord(word)
+
+#=====================================================================================
+
+def get_text_image(text,text_color=arcade.color.BLACK,font_size=FONT_SIZE,width=0,align="left",font_name=('calibri','arial')):
+  global text_images_save
+  
+  """
+  Wrapper for get_text_image in text.py of arcade
+  """
+  
+  # First try to get the word from the text_images_save dictionary
+  try: 
+    image = text_images_save[text]
+  except:
+    # Does not exist so make and save it
+    image = arcade.get_text_image(text=text,
+                          text_color=text_color,
+                          font_size=font_size,
+                          width=width,
+                          align=align,
+                          font_name=font_name)
+    text_images_save[text] = image
+    
+  return image
+
+#=====================================================================================
+
+def get_lingq_image(text,status,extended_status,text_color=arcade.color.BLACK,font_size=FONT_SIZE,width=0,align="left",font_name=('calibri','arial')):
+  global lingq_images_save
+  
+  """
+  Wrapper for get_text_image in text.py of arcade for LingQ images
+  """
+  
+  # Get identifier for the lingq
+  idlingq = text+str(status)+str(extended_status)
+  
+  # First try to get the word from the lingq_images_save dictionary
+  if idlingq in lingq_images_save:
+    
+    # Already made image so just load that
+    image = lingq_images_save[idlingq]
+    
+  else:
+    
+    # Get color
+    if status == 0:
+      color = LINGQ_HIGHLIGHT_COLOR_1
+    elif status == 1:
+      color = LINGQ_HIGHLIGHT_COLOR_2
+    elif status == 2:
+      color = LINGQ_HIGHLIGHT_COLOR_3
+    elif status == 3:
+      color = LINGQ_HIGHLIGHT_COLOR_4
+    
+    # Make image
+    image = arcade.get_text_image(text=text,
+                          text_color=color,
+                          font_size=font_size,
+                          width=width,
+                          align=align,
+                          font_name=font_name,
+                          background_color=color)
+    
+    # Save it
+    lingq_images_save[idlingq] = image
+    
+  return image
+
+#=====================================================================================
+
+def get_unknown_image(text,text_color=arcade.color.BLACK,font_size=FONT_SIZE,width=0,align="left",font_name=('calibri','arial')):
+  global unknown_images_save
+  
+  """
+  Wrapper for get_text_image in text.py of arcade for unknown word images
+  """
+  
+  # First try to get the word from the unknown_images_save dictionary
+  try: 
+    image = unknown_images_save[text]
+  except:
+    # Does not exist so make and save it
+    image = arcade.get_text_image(text=text,
+                          text_color=UNKNOWN_HIGHLIGHT_COLOR,
+                          font_size=font_size,
+                          width=width,
+                          align=align,
+                          font_name=font_name,
+                          background_color=UNKNOWN_HIGHLIGHT_COLOR)
+    unknown_images_save[text] = image
+    
+  return image
+
+#=====================================================================================
+
+def ReadText(filename):
+  
+  with open(filename,'r') as f:
+    content = f.readlines()
+  
+  text = ''
+  for line in content:
+    if line.replace(' ','') == '\n':
+      text += ' '+PARAGRAPH_STRING+' '
+    text += line.replace('\n',' ')
+  
+  return text
+
+#=====================================================================================
+
+def GetBasicWord(string):
+  
+  """Takes string with word, returns string with punctuation removed and lowercase."""
+  
+  # Make sure there is at least one real letter in word and return -1 if not
+  isWord = False
+  for char in string:
+    if char.isalpha():
+      isWord = True
+  if not isWord:
+    return -1
+      
+  # Make deep copy of string 
+  word = copy.deepcopy(string)
+  
+  # Make word lower case
+  word = word.lower()
+  
+  # Check if need to shave characters off edges
+  if not ( word[0].isalpha() and word[-1].isalpha() ):
+    
+    # Loop forward and get first letter
+    for i in range(0,len(word),1):
+      if word[i].isalpha():
+        iStart = i
+        break
+    
+    # Loop backwards and get last letter
+    for i in range(len(word)-1,-1,-1):
+      if word[i].isalpha():
+        iEnd = i
+        break
+    
+    # Get new word
+    word = word[iStart:iEnd+1]
+  
+  return word
+
+#=====================================================================================
+
+def inBoxSprite(x,y,sprite):
+  
+  """Takes x and y coordinates and a sprite, returns if this is in that spite's box."""
+  
+  return inBox(x,y,sprite.center_x,sprite.center_y,sprite.width,sprite.height)
+
+#=====================================================================================
+
+def inBox(x,y,center_x,center_y,width,height):
+  
+  """Takes x and y coordinates and dimensions of box, returns if this is in that box."""
+  
+  # Initially assume not
+  inBox = False
+  
+  # Get edge coordinates
+  xMin = center_x - 0.5*width
+  xMax = center_x + 0.5*width
+  yMin = center_y - 0.5*height
+  yMax = center_y + 0.5*height
+  
+  # Determine if this is in the box
+  if ( x > xMin ) and ( x < xMax ) and ( y > yMin ) and ( y < yMax ):
+    inBox = True
+  
+  return inBox
+
+#=====================================================================================
+
+class LingQBubble:
+  
+  #---------------------------------------------------------------
+  
+  def __init__(self,kind,word_sprite,lingq):
+    
+    # Save LingQ
+    self.lingq = lingq
+    
+    # Get bubble center coordinates and dimensions
+    self.width = BUBBLE_WIDTH
+    self.height = BUBBLE_HEIGHT
+    self.xCenter , self.yCenter = self.GetBubbleCenter(word_sprite)
+    
+    # Setup bubble box
+    self.bubble_shape_list = self.GetBubbleBox()
+     
+    # Setup bubble contents
+    self.bubble_sprite_list , self.term_shape_list = self.GetBubbleContents(word_sprite,lingq)
+    
+    return
+  
+  
+  #---------------------------------------------------------------
+  
+  def GetBubbleCenter(self,word_sprite):
+    
+    # By default, put the bubble to the right of the word, but determine if should be to left
+    if word_sprite.center_x+self.width > 0.95*SCREEN_WIDTH:
+      xCenter = word_sprite.center_x - 0.5*self.width
+    else:
+      xCenter = word_sprite.center_x + 0.5*self.width
+    
+    # Be default put bubble below word, but determine if it should be above
+    if word_sprite.center_y - self.height < 0.05*SCREEN_HEIGHT:
+      # Above
+      yCenter = word_sprite.center_y + 0.5*LINE_SPACE + 0.5*self.height
+    else:
+      # Below
+      yCenter = word_sprite.center_y - 0.5*LINE_SPACE - 0.5*self.height
+    
+    return xCenter , yCenter
+  
+  #---------------------------------------------------------------
+  
+  def GetBubbleBox(self):
+    
+    # Make shape list for bubble
+    bubble_shape_list = arcade.ShapeElementList()
+    
+    # Main box
+    shape = arcade.create_rectangle_filled(self.xCenter,self.yCenter,self.width,self.height,LINGQ_BUBBLE_COLOR)
+    bubble_shape_list.append(shape)
+    
+    # Outline of box
+    shape = arcade.create_rectangle_outline(self.xCenter,self.yCenter,self.width,self.height,arcade.color.BLACK,1)
+    bubble_shape_list.append(shape)
+    shape = arcade.create_rectangle_outline(self.xCenter,self.yCenter,self.width,self.height,arcade.color.BLACK,1,180.0)
+    bubble_shape_list.append(shape)
+    
+    return bubble_shape_list
+  
+  #---------------------------------------------------------------
+  
+  def GetBubbleContents(self,word_sprite,lingq):
+    
+    # Make a sprite list for contents of bubble
+    bubble_sprite_list = arcade.SpriteList()
+    
+    #------------------------------------------------
+    # TERM
+    
+    # Made image out of word
+    image = get_text_image(text=lingq['term'],font_size=FONT_SIZE_BUBBLE_TERM)
+    
+    # Make sprite from image
+    term_sprite = WordSprite()
+    term_sprite.SetWord(lingq['term'])
+    term_sprite._texture = arcade.Texture(lingq['term'])
+    term_sprite.texture.image = image
+    term_sprite.width = image.width
+    term_sprite.height = image.height
+    
+    # Set position of word
+    term_sprite.center_x = self.xCenter - 0.5*self.width + BUBBLE_MARGIN + 0.5*term_sprite.width
+    term_sprite.center_y = self.yCenter + 0.5*self.height - BUBBLE_MARGIN - 0.5*term_sprite.height
+    
+    # Add word to word list
+    bubble_sprite_list.append(term_sprite)
+    
+    #------------------------------------------------
+    # HINTS
+    
+    # Number of hints
+    nHints = len( lingq['hints'] )
+    
+    # Center y position of first hin
+    center_y = self.yCenter + 0.2*self.height
+    
+    # Loop over hints and add each one
+    for iHint in range(0,nHints):
+      
+      # Start hint text
+      text = ''
+      
+      # Start hint with number of multiple hints
+      if nHints > 1:
+        text += str(iHint+1)+". "
+      
+      # Add text of hint
+      text += lingq['hints'][iHint]['text']
+      
+      # Made image out of word
+      image = get_text_image(text=text,font_size=FONT_SIZE_BUBBLE_HINT,width=self.width-4*BUBBLE_MARGIN)
+      
+      # Make sprite from image
+      text_sprite = WordSprite()
+      text_sprite.SetWord(text)
+      text_sprite._texture = arcade.Texture(text)
+      text_sprite.texture.image = image
+      text_sprite.width = image.width
+      text_sprite.height = image.height
+      
+      # Set position of word
+      text_sprite.center_x = self.xCenter - 0.5*self.width + 2*BUBBLE_MARGIN + 0.5*text_sprite.width
+      text_sprite.center_y = center_y
+      
+      # Get center_y of next hint if there is one
+      center_y += -BUBBLE_HINT_SPACING
+      
+      # Add word to word list
+      bubble_sprite_list.append(text_sprite)
+      
+    #------------------------------------------------
+    # STATUS
+    
+    # Get central y positions of buttons 
+    center_y += -0.5*BUBBLE_STATUS_HEIGHT
+    
+    # Get centers of all six buttons in x coordinates
+    center_x = []
+    center_x.append( self.xCenter - 0.5*self.width + BUBBLE_MARGIN + 0.5*BUBBLE_STATUS_WIDTH )
+    center_x.append( center_x[-1] + BUBBLE_STATUS_WIDTH )
+    center_x.append( center_x[-1] + BUBBLE_STATUS_WIDTH )
+    center_x.append( center_x[-1] + BUBBLE_STATUS_WIDTH )
+    center_x.append( center_x[-1] + BUBBLE_STATUS_WIDTH )
+    center_x.append( center_x[-1] + BUBBLE_STATUS_WIDTH )
+    
+    # Get text for all six buttons
+    button_text = [ '1' , '2' , '3' , '4' , 'K' , 'X' ]
+    
+    # Make letters for each
+    for iButton in range(0,len(button_text)):
+      
+      # Make image out of word
+      image = get_text_image(text=button_text[iButton],font_size=FONT_SIZE_BUBBLE_HINT)
+      
+      # Make sprite from image
+      text_sprite = WordSprite()
+      text_sprite.SetWord(button_text[iButton])
+      text_sprite._texture = arcade.Texture(button_text[iButton])
+      text_sprite.texture.image = image
+      text_sprite.width = image.width
+      text_sprite.height = image.height
+      
+      # Set position of word
+      text_sprite.center_x = center_x[iButton]
+      text_sprite.center_y = center_y
+      
+      # Add word to word list
+      bubble_sprite_list.append(text_sprite)
+    
+    # Make shape list for boxes
+    term_shape_list = arcade.ShapeElementList()
+    
+    # Determine which box is the current status 
+    if self.lingq['status'] == 0:
+      iButtonCurrent = 0
+    elif self.lingq['status'] == 1:
+      iButtonCurrent = 1
+    elif self.lingq['status'] == 2:
+      iButtonCurrent = 2
+    elif ( self.lingq['status'] == 3 ) and ( self.lingq['extended_status'] == 3 ):
+      iButtonCurrent = 4
+    elif self.lingq['status'] == 3:
+      iButtonCurrent = 3
+    else:
+      iButtonCurrent = -1
+    
+    # Make boxes for each button
+    for iButton in range(0,len(button_text)):
+      
+      # Get color for filled box
+      color = LINGQ_BUBBLE_STATUS_COLOR
+      if iButton == iButtonCurrent:
+        color = LINGQ_BUBBLE_STATUS_CURRENT_COLOR
+      
+      # Make filled box
+      shape = arcade.create_rectangle_filled(center_x[iButton],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,color)
+      term_shape_list.append(shape)
+      
+      # Outline of box
+      shape = arcade.create_rectangle_outline(center_x[iButton],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,arcade.color.BLACK,1)
+      term_shape_list.append(shape)
+      #shape = arcade.create_rectangle_outline(center_x[iButton],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,arcade.color.BLACK,1,180.0)
+      #term_shape_list.append(shape)
+  
+    # Redraw outline around last box to make sure it is done
+    shape = arcade.create_rectangle_outline(center_x[-1],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,arcade.color.BLACK,1)
+    term_shape_list.append(shape)
+    shape = arcade.create_rectangle_outline(center_x[-1],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,arcade.color.BLACK,1,180.0)
+    term_shape_list.append(shape)
+    
+    # Save the centers of the buttons
+    self.status_center_x = center_x
+    self.status_center_y = center_y
+    
+    #------------------------------------------------
+    
+    return bubble_sprite_list , term_shape_list
+  
+  #---------------------------------------------------------------
+  
+  def draw(self):
+    
+    # Draw bubble box
+    self.bubble_shape_list.draw()
+    
+    # Draw status boxes
+    self.term_shape_list.draw()
+    
+    # Draw inside sprites
+    self.bubble_sprite_list.draw()
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def ClickInBox(self,x,y):
+    
+    """Takes x and y coordinates of click, returns if in box."""
+    
+    return inBox(x,y,self.xCenter,self.yCenter,self.width,self.height)
+  
+  #---------------------------------------------------------------
+  
+  def ClickInStatus(self,x,y):
+    
+    """Takes x and y coordinates of click, returns if in status box and which one."""
+    
+    # Initially assume not in any status box
+    clickedStatus = None
+    
+    # Check each box individually
+    for iButton in range(0,len(self.status_center_x)):
+      if inBox(x,y,self.status_center_x[iButton],self.status_center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT):
+        clickedStatus = iButton
+    
+    return clickedStatus
+  
+  #---------------------------------------------------------------
+  
+  def idLingQ(self):
+    """Returns LingQ ID."""
+    return self.lingq['id']
+  
+  #---------------------------------------------------------------
+  
+  def termLingQ(self):
+    """Returns LingQ term."""
+    return self.lingq['term']
+  
+  #---------------------------------------------------------------
+
+#=====================================================================================
+
+def clickedExit(x,y):
+  
+  """Takes coordinate of click, determines if exit was clicked."""
+  
+  if ( x < SCREEN_WIDTH/5.0 ) and ( y > SCREEN_HEIGHT-MARGIN_HEIGHT ):
+    return True
+  
+  return False
+
+#=====================================================================================
+
+def clickedPreviousPage(x,y):
+  
+  """Takes coordinate of click, determines if next page was clicked."""
+  
+  if ( x < MARGIN_WIDTH ) and ( y < SCREEN_HEIGHT-MARGIN_HEIGHT ) and ( y > MARGIN_HEIGHT ):
+    return True
+  
+  return False
+
+#=====================================================================================
+
+def clickedNextPage(x,y):
+  
+  """Takes coordinate of click, determines if next page was clicked."""
+  
+  if ( x > SCREEN_WIDTH-MARGIN_WIDTH ) and ( y < SCREEN_HEIGHT-MARGIN_HEIGHT ) and ( y > MARGIN_HEIGHT ):
+    return True
+  
+  return False
+
+#=====================================================================================
+
+def main():
+  """Main method"""
+  window = LingQReader()
+  window.setup()
+  arcade.run()
+  return
+
+#=====================================================================================
+
+if __name__ == "__main__":
+  main()
