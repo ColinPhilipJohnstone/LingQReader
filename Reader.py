@@ -102,7 +102,7 @@ class LingQReader(arcade.Window):
     # Set background color
     arcade.set_background_color(arcade.color.WHITE)
     
-  return
+    return
   
   #---------------------------------------------------------------
   
@@ -116,6 +116,8 @@ class LingQReader(arcade.Window):
     
     # Load unknown words
     self.unknownList = lingqapi.GetUnknownWords()
+    
+    # Generate sprites for all 
     
     # Setup text
     self.page_word_list = self.setup_text()
@@ -136,6 +138,9 @@ class LingQReader(arcade.Window):
     
     # Assume not trying to exit
     self.attemptExit = False
+    
+    # Assuming not clicking change status button
+    self.clickingStatus = False
     
     return
   
@@ -351,21 +356,6 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
-  def on_key_press(self,key,modifiers):
-    
-    # See if moving to next page
-    if key == arcade.key.RETURN:
-      self.nPageCurrent += 1
-    
-    # See if finished text
-    if self.nPageCurrent >= self.nPages:
-      sys.exit()
-    
-    
-    return
-  
-  #---------------------------------------------------------------
-  
   def on_mouse_press(self, x, y, button, modifiers):
     
     """Take mouse click, determine what to do."""
@@ -384,10 +374,19 @@ class LingQReader(arcade.Window):
           # Check if in a status box and get LingQ id to change status if is
           inStatus = self.displayBubble.ClickInStatus(x,y)
           if not inStatus is None:
+            
+            # Get info for LingQ to change
             idlingq = self.displayBubble.idLingQ()
             termlingq = self.displayBubble.termLingQ()
-            print(idlingq,termlingq)
+            
+            # Make change
             self.changeLingQstatus(idlingq,termlingq,inStatus)
+            
+            # Set clicked object identifier
+            clickObject = 'bubblestatus'
+            
+            # Set identifier for closing on click release
+            self.clickingStatus = True
     
     # Loop over LingQs on screen 
     if clickObject is None:
@@ -471,6 +470,17 @@ class LingQReader(arcade.Window):
     
     return
   
+  #---------------------------------------------------------------
+  
+  def on_mouse_release(self, x, y, button, modifiers):
+    
+    # If clicking on status change button, remove bubble 
+    if self.clickingStatus:
+      self.displayBubble = None
+      self.clickingStatus = False
+    
+    return
+    
   #---------------------------------------------------------------
   
   def changeLingQstatus(self,idlingq,termlingq,newstatus):
