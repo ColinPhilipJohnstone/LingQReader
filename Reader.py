@@ -285,8 +285,11 @@ class LingQReader(arcade.Window):
       # Loop over words in word_list and check each one against LingQs
       for word_sprite in word_list.sprite_list:
         
+        print('...',word_sprite.word,self.unknownList)
+        
         # Check if this is a LingQ
-        if word_sprite.word in self.unknownList:
+        if GetBasicWord(word_sprite.word) in self.unknownList:
+          print("here")
           
           # Make image for this LingQ
           image = get_unknown_image(text=word_sprite.wordRaw)
@@ -525,8 +528,6 @@ class LingQReader(arcade.Window):
     
     """Takes LingQ id and changes the status."""
     
-    print("---",idlingq,termlingq,newstatus)
-    
     # Holds if should delete LingQ
     shouldDelete = False
     
@@ -552,7 +553,7 @@ class LingQReader(arcade.Window):
       new_extended_status = -1
     
     if shouldDelete:
-      print("Cannot delete LingQs yet")
+      self.ignoreWord(termlingq)
       return
     
     # Get index of this LingQ
@@ -684,6 +685,29 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
+  def ignoreWord(self,term):
+    
+    """Takes term, sets all words with this term to ignored."""
+    
+    # If it is a LingQ then delete it from the records
+    if term in self.lingqsDict:
+      print("ignoring word is LingQ")
+    
+    
+    #self.lingqs
+    
+    
+    
+    ## Loop over pages and make sure not LingQ or unknown
+    #for iPage in range(0,len(self.page_lingq_list)):
+      
+    
+    # Set to ignored online
+    
+    return
+  
+  #---------------------------------------------------------------
+  
   def on_update(self,dt):
     
     return
@@ -799,7 +823,7 @@ def get_unknown_image(text,text_color=arcade.color.BLACK,font_size=FONT_SIZE,wid
 def GetBasicWord(string):
   
   """Takes string with word, returns string with punctuation removed and lowercase."""
-  
+  print(string)
   # Make sure there is at least one real letter in word and return -1 if not
   isWord = False
   for char in string:
@@ -1491,9 +1515,6 @@ if __name__ == "__main__":
   # Set the start method for multiprocessing to the default for Windows 
   # to avoid platform dependence
   mp.set_start_method('spawn')
-  
-  #lingqapi.CreateLingQ('atestword2','a test hint')
-  #sys.exit()
   
   # Create the Window
   window = LingQReader()

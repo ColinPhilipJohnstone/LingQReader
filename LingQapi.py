@@ -14,9 +14,9 @@ API_KEY = "408fa561d040f932be1f3303e50e426794fda139"
 LANGUAGE = 'de'
 
 # Lesson
-LESSON = '4983458' # longer
+#LESSON = '4983458' # longer
 #LESSON = '35644' # shorter
-#LESSON = '5113948' # really short
+LESSON = '5113948' # really short
 
 # Dictionary for saving hints that have already been looked for
 unknown_hints = {}
@@ -34,8 +34,9 @@ def GetText():
   headers = {'Authorization': 'Token {}'.format(API_KEY)}
   
   # Request data
+  print('a')
   r = requests.get( url=URL , headers=headers )
-
+  print('b')
   # Get text
   data = r.json() 
   text = data['text']
@@ -68,6 +69,8 @@ def GetUnknownWords():
   unknownList = []
   for word in data:
     unknownList.append(word['word'])
+  
+  print(unknownList)
   
   return unknownList
 
@@ -229,5 +232,29 @@ def CreateLingQ(word,hint_text):
 
 #curl -X POST -d '{"hints":[{"locale": "en", "text": "a test hint"}], "term": "atestword", "lesson": 5113948}' 
 #'https://www.lingq.com/api/languages/de/lingqs/' -H 'Authorization: Token 408fa561d040f932be1f3303e50e426794fda139' -H "Content-Type: application/json"
+
+#=====================================================================================
+
+def IgnoreWord(word):
+  
+  # Set the URL for this task
+  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/ignored-words/'
+  
+  # Authorisation stuff
+  headers = { 'Authorization':'Token {}'.format(API_KEY) }
+  
+  # Params for creating the LingQ
+  params = { 'word':word }
+  
+  # Do post
+  r = requests.post(url=URL, headers=headers, data=params)
+  
+  # Make change without waiting for it to finish
+  #p = mp.Process(target=post,args=(URL,headers,params))
+  #p.daemon = True
+  #p.start()
+  
+  return
+
 
 #=====================================================================================
