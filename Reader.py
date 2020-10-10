@@ -33,10 +33,10 @@ MARGIN_WIDTH = SCREEN_WIDTH/40.0
 MARGIN_HEIGHT = SCREEN_HEIGHT/25.0
 
 # Line spacing and paragraph stuff
-LINE_SPACE = 30
+LINE_SPACE = 40
 PARAGRAPH_SPACE = int(LINE_SPACE*1.5)
 PARAGRAPH_STRING = '</p><p>'
-FONT_SIZE = 15
+FONT_SIZE = 20
 
 # For additional space around word in highlighting
 LINGQ_WIDTH_FACTOR = 1.02
@@ -47,10 +47,11 @@ BUBBLE_WIDTH = int(SCREEN_WIDTH/2.1)
 BUBBLE_HEIGHT = int(BUBBLE_WIDTH/1.8)
 BUBBLE_MARGIN = int(BUBBLE_WIDTH/20.0)
 FONT_SIZE_BUBBLE_TERM = 20
-FONT_SIZE_BUBBLE_HINT = 15
+FONT_SIZE_BUBBLE_HINT = 10
 BUBBLE_HINT_SPACING = 30
 BUBBLE_STATUS_WIDTH = int(min(50,(BUBBLE_WIDTH-2*BUBBLE_MARGIN)/6.0))
 BUBBLE_STATUS_HEIGHT = BUBBLE_STATUS_WIDTH
+UNKNOWN_BUBBLE_MAX_HINTS = 2
 
 # Colors 
 LINGQ_HIGHLIGHT_COLOR_1 = (255,255,0,255)
@@ -61,7 +62,8 @@ LINGQ_BUBBLE_COLOR = arcade.color.LIGHT_GOLDENROD_YELLOW
 LINGQ_BUBBLE_STATUS_COLOR = arcade.color.AZURE_MIST
 LINGQ_BUBBLE_STATUS_CURRENT_COLOR = arcade.color.BLUEBERRY
 UNKNOWN_HIGHLIGHT_COLOR = arcade.color.BLIZZARD_BLUE
-UNKNOWN_BUBBLE_COLOR = arcade.color.BLIZZARD_BLUE
+UNKNOWN_BUBBLE_COLOR = arcade.color.ITALIAN_SKY_BLUE
+UNKNOWN_HINT_BOX_COLOR = arcade.color.AZURE_MIST
 EXIT_BUTTON_COLOR = arcade.color.RED
 
 # Dictionary for saving text images
@@ -117,7 +119,8 @@ class LingQReader(arcade.Window):
     # Load unknown words
     self.unknownList = lingqapi.GetUnknownWords()
     
-    # Generate sprites for all 
+    # Get hints for unknown words
+    lingqapi.GetLingQHintsList(self.unknownList)
     
     # Setup text
     self.page_word_list = self.setup_text()
@@ -371,23 +374,52 @@ class LingQReader(arcade.Window):
           # Set clicked object identifier
           clickObject = 'bubble'
           
-          # Check if in a status box and get LingQ id to change status if is
-          inStatus = self.displayBubble.ClickInStatus(x,y)
-          if not inStatus is None:
+          # If in a LingQ bubble do some stuff
+          if type(self.displayBubble).__name__ == 'LingQBubble':
             
-            # Get info for LingQ to change
-            idlingq = self.displayBubble.idLingQ()
-            termlingq = self.displayBubble.termLingQ()
+            # Check if in a status box and get LingQ id to change status if is
+            inStatus = self.displayBubble.ClickInStatus(x,y)
+            if not inStatus is None:
+              
+              # Get info for LingQ to change
+              idlingq = self.displayBubble.idLingQ()
+              termlingq = self.displayBubble.termLingQ()
+              
+              # Make change
+              self.changeLingQstatus(idlingq,termlingq,inStatus)
+              
+              # Set clicked object identifier
+              clickObject = 'bubblestatus'
+              
+              # Set identifier for closing on click release
+              self.clickingStatus = True
+          
+          elif type(self.displayBubble).__name__ == 'UnknownBubble':
             
-            # Make change
-            self.changeLingQstatus(idlingq,termlingq,inStatus)
+            # Check if in a box of some kind
+            inStatus = self.displayBubble.ClickInStatus(x,y)
             
-            # Set clicked object identifier
-            clickObject = 'bubblestatus'
+            # If in a hint box, do something
+            if type(inStatus) == int:
+              
+              # Get term
+              term = self.displayBubble.term
+              
+              # Get the hint
+              hint = self.displayBubble.hints[inStatus]
+              
+              # Make LingQ
+              self.createLingQ(term,hint)
             
-            # Set identifier for closing on click release
-            self.clickingStatus = True
-    
+            # If in the known box, set it to known
+            if inStatus == 'K':
+              print("set to known")
+            
+            # If in the ignore, ignore the word
+            if inStatus == 'X':
+              print("ignore word")
+            
+      
     # Loop over LingQs on screen 
     if clickObject is None:
       for lingq_sprite in self.page_lingq_list[self.nPageCurrent]:
@@ -405,8 +437,8 @@ class LingQReader(arcade.Window):
             # Update clickObject to hold LingQ
             clickObject = 'lingq'
             
-            # Make LingQ bubble
-            self.displayBubble = LingQBubble('lingq',lingq_sprite,lingq)
+            # Make display bubble
+            self.displayBubble = LingQBubble(lingq_sprite,lingq)
       
     # Loop over unknown words on screen if not found click
     if clickObject is None:
@@ -420,7 +452,13 @@ class LingQReader(arcade.Window):
           
           # Update clickObject to hold unknown
           clickObject = 'unknown'
-    
+          
+          # Get hints for this word
+          hints = lingqapi.GetLingQHints(word)
+          
+          # Make display bubble
+          self.displayBubble = UnknownBubble(unknown_sprite,word,hints)
+            
     # Loop over all words on screen if not found click
     if clickObject is None:
       for word_sprite in self.page_word_list[self.nPageCurrent]:
@@ -572,6 +610,74 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
+  def createLingQ(self,term,hint):
+    
+    """Creates LingQ for a given term"""
+    
+    # Status for new LingQ
+    new_status = 0
+    new_extended_status = 0
+    
+    # Loop over all words and change images
+    for iPage in range(0,len(self.page_lingq_list)):
+      
+      # Start new sprite lists for unknown words  on this page
+      unknown_sprite_list_new = arcade.SpriteList()
+      lingq_sprite_list_new = arcade.SpriteList()
+      
+      # Loop over all unknown words on page
+      for iWord in range(0,len(self.page_unknown_list[iPage].sprite_list)):
+        
+        # Get sprite for this unknown word
+        unknown_sprite = self.page_unknown_list[iPage].sprite_list[iWord]
+        
+        # Only add to unknown list if not the word making LingQ for
+        if not unknown_sprite.word == term:
+          unknown_sprite_list_new.append(unknown_sprite)
+      
+        # If it is the word, add to LingQ sprite list for this page
+        if unknown_sprite.word == term:
+          
+          
+          # Make a new image for this LingQ
+          image = get_lingq_image(unknown_sprite.wordRaw,new_status,new_extended_status)
+          
+          # Make sprite for this LingQ
+          lingq_spriteNew = WordSprite()
+          lingq_spriteNew.SetWord(unknown_sprite.wordRaw)
+          lingq_spriteNew._texture = arcade.Texture(unknown_sprite.wordRaw+str(new_status)+str(new_extended_status))
+          lingq_spriteNew.texture.image = image
+          lingq_spriteNew.width = image.width
+          lingq_spriteNew.height = image.height
+          lingq_spriteNew.center_x = unknown_sprite.center_x
+          lingq_spriteNew.center_y = unknown_sprite.center_y
+          
+          # Add new sprite to list
+          self.page_lingq_list[iPage].append(lingq_spriteNew)
+        
+      # Save the new sprite list
+      self.page_unknown_list[iPage] = unknown_sprite_list_new
+    
+    # Make a dictionary for this LingQ
+    LingQdict = {}
+    LingQdict['id'] = -1
+    LingQdict['term'] = term
+    LingQdict['word'] = -1
+    LingQdict['hints'] = [hint]
+    LingQdict['fragment'] = ''
+    LingQdict['status'] = new_status
+    LingQdict['extended_status'] = new_extended_status
+    LingQdict['notes'] = ''
+    LingQdict['tags'] = ''
+    
+    # Add to self.lingqs and self.lingqsDict
+    self.lingqs.append(LingQdict)
+    self.lingqsDict[term] = len(self.lingqs)-1
+    
+    return
+  
+  #---------------------------------------------------------------
+  
   def on_update(self,dt):
     
     return
@@ -595,9 +701,12 @@ def get_text_image(text,text_color=arcade.color.BLACK,font_size=FONT_SIZE,width=
   Wrapper for get_text_image in text.py of arcade
   """
   
+  # Get identifier for image
+  idimage = text+str(text_color)+str(font_size)+str(font_size)
+  
   # First try to get the word from the text_images_save dictionary
   try: 
-    image = text_images_save[text]
+    image = text_images_save[idimage]
   except:
     # Does not exist so make and save it
     image = arcade.get_text_image(text=text,
@@ -606,7 +715,7 @@ def get_text_image(text,text_color=arcade.color.BLACK,font_size=FONT_SIZE,width=
                           width=width,
                           align=align,
                           font_name=font_name)
-    text_images_save[text] = image
+    text_images_save[idimage] = image
     
   return image
 
@@ -750,11 +859,317 @@ def inBox(x,y,center_x,center_y,width,height):
 
 #=====================================================================================
 
+class UnknownBubble:
+  
+  #---------------------------------------------------------------
+  
+  def __init__(self,word_sprite,term,hints):
+    
+    # Save term and hints
+    self.term = term
+    self.hints = hints
+    
+    # Get bubble center coordinates and dimensions
+    self.width = BUBBLE_WIDTH
+    self.height = BUBBLE_HEIGHT
+    self.xCenter , self.yCenter = self.GetBubbleCenter(word_sprite)
+    
+    # Setup bubble box
+    self.bubble_shape_list = self.GetBubbleBox()
+     
+    # Setup bubble contents
+    self.GetBubbleContents(word_sprite,term,hints)
+    
+    return
+  
+  
+  #---------------------------------------------------------------
+  
+  def GetBubbleCenter(self,word_sprite):
+    
+    # By default, put the bubble to the right of the word, but determine if should be to left
+    if word_sprite.center_x+self.width > 0.95*SCREEN_WIDTH:
+      xCenter = word_sprite.center_x - 0.5*self.width
+    else:
+      xCenter = word_sprite.center_x + 0.5*self.width
+    
+    # Be default put bubble below word, but determine if it should be above
+    if word_sprite.center_y - self.height < 0.05*SCREEN_HEIGHT:
+      # Above
+      yCenter = word_sprite.center_y + 0.5*LINE_SPACE + 0.5*self.height
+    else:
+      # Below
+      yCenter = word_sprite.center_y - 0.5*LINE_SPACE - 0.5*self.height
+    
+    return xCenter , yCenter
+  
+  #---------------------------------------------------------------
+  
+  def GetBubbleBox(self):
+    
+    # Make shape list for bubble
+    bubble_shape_list = arcade.ShapeElementList()
+    
+    # Main box
+    shape = arcade.create_rectangle_filled(self.xCenter,self.yCenter,self.width,self.height,UNKNOWN_BUBBLE_COLOR)
+    bubble_shape_list.append(shape)
+    
+    # Outline of box
+    shape = arcade.create_rectangle_outline(self.xCenter,self.yCenter,self.width,self.height,arcade.color.BLACK,1)
+    bubble_shape_list.append(shape)
+    shape = arcade.create_rectangle_outline(self.xCenter,self.yCenter,self.width,self.height,arcade.color.BLACK,1,180.0)
+    bubble_shape_list.append(shape)
+    
+    return bubble_shape_list
+  
+  #---------------------------------------------------------------
+  
+  def GetBubbleContents(self,word_sprite,term,hints):
+    
+    
+    #------------------------------------------------
+    # TERM
+    
+    # Make a sprite list for the term
+    term_sprite_list = arcade.SpriteList()
+    
+    # Made image out of word
+    image = get_text_image(text=term,font_size=FONT_SIZE_BUBBLE_TERM)
+    
+    # Make sprite from image
+    term_sprite = WordSprite()
+    term_sprite.SetWord(term)
+    term_sprite._texture = arcade.Texture(term)
+    term_sprite.texture.image = image
+    term_sprite.width = image.width
+    term_sprite.height = image.height
+    
+    # Set position of word
+    term_sprite.center_x = self.xCenter - 0.5*self.width + BUBBLE_MARGIN + 0.5*term_sprite.width
+    term_sprite.center_y = self.yCenter + 0.5*self.height - BUBBLE_MARGIN - 0.5*term_sprite.height
+    
+    # Add word to word list
+    term_sprite_list.append(term_sprite)
+    
+    #------------------------------------------------
+    # HINTS
+    
+    # Make sprite and shape lists for the text
+    hint_sprite_list = arcade.SpriteList()
+    hint_shape_list = arcade.ShapeElementList()
+    
+    # Number of hints available 
+    nHints = len(hints)
+    
+    # Number of hints to show
+    nHintsShow = min( nHints , UNKNOWN_BUBBLE_MAX_HINTS )
+    
+    # Save nHintsShow
+    self.nHintsShow = nHintsShow
+    
+    # Center y position of first hin
+    center_y = self.yCenter + 0.2*self.height
+    
+    # Loop over hints and add each one
+    for iHint in range(0,nHintsShow):
+      
+      # Start hint text
+      text = ''
+      
+      # Start hint with number of multiple hints
+      if nHints > 1:
+        text += str(iHint+1)+". "
+      
+      # Add popularity
+      text += "(" + str( hints[iHint]['popularity'] ) + ") "
+      
+      # Add text of hint
+      text += hints[iHint]['text']
+      
+      # Made image out of word
+      image = get_text_image(text=text,font_size=FONT_SIZE_BUBBLE_HINT,width=self.width-4*BUBBLE_MARGIN)
+      
+      # Make sprite from image
+      text_sprite = WordSprite()
+      text_sprite.SetWord(text)
+      text_sprite._texture = arcade.Texture(text)
+      text_sprite.texture.image = image
+      text_sprite.width = image.width
+      text_sprite.height = image.height
+      
+      # Set position of word
+      text_sprite.center_x = self.xCenter - 0.5*self.width + 2*BUBBLE_MARGIN + 0.5*text_sprite.width
+      text_sprite.center_y = center_y
+      
+      # Get center_y of next hint if there is one
+      center_y += -BUBBLE_HINT_SPACING-0.5*text_sprite.height
+    
+      # Add word to list
+      hint_sprite_list.append(text_sprite)
+      
+      # NOW DO THE BOX
+      
+      # Main box
+      shape = arcade.create_rectangle_filled(text_sprite.center_x,text_sprite.center_y,text_sprite.width,text_sprite.height,UNKNOWN_HINT_BOX_COLOR)
+      hint_shape_list.append(shape)
+      
+      # Outline of box
+      shape = arcade.create_rectangle_outline(text_sprite.center_x,text_sprite.center_y,text_sprite.width,text_sprite.height,arcade.color.BLACK,1)
+      hint_shape_list.append(shape)
+      shape = arcade.create_rectangle_outline(text_sprite.center_x,text_sprite.center_y,text_sprite.width,text_sprite.height,arcade.color.BLACK,1,180.0)
+      hint_shape_list.append(shape)
+      
+    
+    #------------------------------------------------
+    # STATUS
+    
+    # Make sprite and shape lists for status
+    status_sprite_list = arcade.SpriteList()
+    status_shape_list = arcade.ShapeElementList()
+    
+    # Get central y positions of buttons 
+    center_y += -0.5*BUBBLE_STATUS_HEIGHT
+    
+    # Get centers of all six buttons in x coordinates
+    center_x = []
+    center_x.append( self.xCenter + 0.5*self.width - BUBBLE_MARGIN - 0.5*BUBBLE_STATUS_WIDTH )
+    center_x.append( center_x[-1] - BUBBLE_STATUS_WIDTH )
+    
+    # Get text for all six buttons
+    button_text = [ 'X' , 'K' ]
+    
+    # Make letters for each
+    for iButton in range(0,len(button_text)):
+      
+      # Make image out of word
+      image = get_text_image(text=button_text[iButton],font_size=FONT_SIZE_BUBBLE_HINT)
+      
+      # Make sprite from image
+      text_sprite = WordSprite()
+      text_sprite.SetWord(button_text[iButton])
+      text_sprite._texture = arcade.Texture(button_text[iButton])
+      text_sprite.texture.image = image
+      text_sprite.width = image.width
+      text_sprite.height = image.height
+      
+      # Set position of word
+      text_sprite.center_x = center_x[iButton]
+      text_sprite.center_y = center_y
+      
+      # Add word to word list
+      status_sprite_list.append(text_sprite)
+    
+    # Make boxes for each button
+    for iButton in range(0,len(button_text)):
+      
+      # Get color for filled box
+      color = LINGQ_BUBBLE_STATUS_COLOR
+      
+      # Make filled box
+      shape = arcade.create_rectangle_filled(center_x[iButton],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,color)
+      status_shape_list.append(shape)
+      
+      # Outline of box
+      shape = arcade.create_rectangle_outline(center_x[iButton],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,arcade.color.BLACK,1)
+      status_shape_list.append(shape)
+      #shape = arcade.create_rectangle_outline(center_x[iButton],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,arcade.color.BLACK,1,180.0)
+      #status_shape_list.append(shape)
+  
+    # Redraw outline around last box to make sure it is done
+    shape = arcade.create_rectangle_outline(center_x[-1],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,arcade.color.BLACK,1)
+    status_shape_list.append(shape)
+    shape = arcade.create_rectangle_outline(center_x[-1],center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT,arcade.color.BLACK,1,180.0)
+    status_shape_list.append(shape)
+    
+    # Save the centers of the buttons
+    self.status_center_x = center_x
+    self.status_center_y = center_y
+    
+    #------------------------------------------------
+    
+    # Save results of all of the above
+    self.term_sprite_list = term_sprite_list
+    self.hint_sprite_list = hint_sprite_list
+    self.hint_shape_list = hint_shape_list
+    self.status_sprite_list = status_sprite_list
+    self.status_shape_list = status_shape_list
+    
+    #------------------------------------------------
+
+    return
+  
+  #---------------------------------------------------------------
+  
+  def draw(self):
+    
+    # Draw bubble box
+    self.bubble_shape_list.draw()
+    
+    # Draw term sprite
+    self.term_sprite_list.draw()
+    
+    # Draw hints
+    self.hint_shape_list.draw()
+    self.hint_sprite_list.draw()
+    
+    # Draw status boxes
+    self.status_shape_list.draw()
+    self.status_sprite_list.draw()
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def ClickInBox(self,x,y):
+    
+    """Takes x and y coordinates of click, returns if in box."""
+    
+    return inBox(x,y,self.xCenter,self.yCenter,self.width,self.height)
+  
+  #---------------------------------------------------------------
+  
+  def ClickInStatus(self,x,y):
+    
+    """Takes x and y coordinates, returns if in some type of box."""
+    
+    # Check if in one of the hint boxes
+    for iHint in range(0,self.nHintsShow):
+      
+      # Get sprite for this hint
+      hint_sprite = self.hint_sprite_list.sprite_list[iHint]
+      
+      # Check if in this hint
+      if inBoxSprite(x,y,hint_sprite):
+        return iHint
+    
+    # Check if in the known box
+    status_sprite = self.status_sprite_list.sprite_list[1]
+    if inBox(x,y,status_sprite.center_x,status_sprite.center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT):
+      return 'K'
+    
+    # Check if in the ignore box
+    status_sprite = self.status_sprite_list.sprite_list[0]
+    if inBox(x,y,status_sprite.center_x,status_sprite.center_y,BUBBLE_STATUS_WIDTH,BUBBLE_STATUS_HEIGHT):
+      return 'X'
+    
+    return None
+  
+  #---------------------------------------------------------------
+  
+  def ClickInHint(self,x,y):
+    
+    
+    return
+  
+  #---------------------------------------------------------------
+
+#=====================================================================================
+
 class LingQBubble:
   
   #---------------------------------------------------------------
   
-  def __init__(self,kind,word_sprite,lingq):
+  def __init__(self,word_sprite,lingq):
     
     # Save LingQ
     self.lingq = lingq
@@ -828,7 +1243,7 @@ class LingQBubble:
     # Make sprite from image
     term_sprite = WordSprite()
     term_sprite.SetWord(lingq['term'])
-    term_sprite._texture = arcade.Texture(lingq['term'])
+    term_sprite._texture = arcade.Texture(lingq['term']+"bubble")
     term_sprite.texture.image = image
     term_sprite.width = image.width
     term_sprite.height = image.height
@@ -1064,6 +1479,9 @@ if __name__ == "__main__":
   # Set the start method for multiprocessing to the default for Windows 
   # to avoid platform dependence
   mp.set_start_method('spawn')
+  
+  #lingqapi.CreateLingQ('atestword2','a test hint')
+  #sys.exit()
   
   # Create the Window
   window = LingQReader()
