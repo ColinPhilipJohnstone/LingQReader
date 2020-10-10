@@ -98,6 +98,16 @@ def GetLingQs():
 
 #=====================================================================================
 
+def put(URL,headers,params):
+  
+  """Takes URL, headers, and params, performs requests.put()."""
+  
+  r = requests.put(url = URL, data=params, headers = headers)
+  
+  return
+  
+#=====================================================================================
+
 def ChangeLingQStatus(idlingq,status,extended_status):
   
   """Takes LingQ id and a status, changes status remotely."""
@@ -111,12 +121,8 @@ def ChangeLingQStatus(idlingq,status,extended_status):
   # Params for changing the LingQ
   params = {'status':status,'extended_status':extended_status}
   
-  # Function for put
-  def put():
-    r = requests.put(url = URL, data=params, headers = headers)
-  
   # Make change without waiting for it to finish
-  p = mp.Process(target=put)
+  p = mp.Process(target=put,args=(URL,headers,params))
   p.daemon = True
   p.start()
   

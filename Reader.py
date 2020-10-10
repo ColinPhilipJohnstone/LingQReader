@@ -13,7 +13,7 @@ import requests
 import requests
 import json
 import LingQapi as lingqapi
-#import ctypes 
+import multiprocessing as mp
 
 #=====================================================================================
 
@@ -1059,14 +1059,19 @@ def clickedNextPage(x,y):
 
 #=====================================================================================
 
-def main():
-  """Main method"""
-  window = LingQReader()
-  window.setup_lesson()
-  arcade.run()
-  return
-
-#=====================================================================================
-
 if __name__ == "__main__":
-  main()
+  
+  # Set the start method for multiprocessing to the default for Windows 
+  # to avoid platform dependence
+  mp.set_start_method('spawn')
+  
+  # Create the Window
+  window = LingQReader()
+  
+  # Setup the lesson
+  window.setup_lesson()
+  
+  # Run the game
+  arcade.run()
+  
+#=====================================================================================
