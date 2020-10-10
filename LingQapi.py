@@ -14,9 +14,9 @@ API_KEY = "408fa561d040f932be1f3303e50e426794fda139"
 LANGUAGE = 'de'
 
 # Lesson
-#LESSON = '4983458' # longer
+LESSON = '4983458' # longer
 #LESSON = '35644' # shorter
-LESSON = '5113948' # really short
+#LESSON = '5113948' # really short
 
 # Dictionary for saving hints that have already been looked for
 unknown_hints = {}
@@ -33,13 +33,8 @@ def GetText():
   # Authorisation stuff
   headers = {'Authorization': 'Token {}'.format(API_KEY)}
   
-  
-  print('1')
-
-  
   # Request data
   r = requests.get( url=URL , headers=headers )
-  print('2')
 
   # Get text
   data = r.json() 
@@ -173,7 +168,7 @@ def put(URL,headers,params):
 
 def post(URL,headers,params):
   """Takes URL, headers, and params, performs requests.put()."""
-  r = requests.post(url = URL, data=params, headers = headers)
+  r = requests.post(url = URL, json=params, headers = headers)
   return
 
 #=====================================================================================
@@ -204,6 +199,8 @@ def CreateLingQ(word,hint_text):
   
   """Retrieves hints for all words in a list of words."""
   
+  print(word,hint_text)
+  
   # Set the URL for this task
   URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lingqs/'
   
@@ -214,6 +211,10 @@ def CreateLingQ(word,hint_text):
   params = { "hints":[{"locale": "en", "text":hint_text}] , "term": word , "lesson":LESSON }
 
   #r = requests.post(url=URL, headers=headers, json=params)
+  #print(r)
+  
+  
+  #post(URL,headers,params)
   
   # Make change without waiting for it to finish
   p = mp.Process(target=post,args=(URL,headers,params))

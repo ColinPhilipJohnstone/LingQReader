@@ -674,6 +674,10 @@ class LingQReader(arcade.Window):
     self.lingqs.append(LingQdict)
     self.lingqsDict[term] = len(self.lingqs)-1
     
+    # Change the LingQ remotely
+    lingqapi.CreateLingQ(term,hint['text'])
+    
+    
     return
   
   #---------------------------------------------------------------
