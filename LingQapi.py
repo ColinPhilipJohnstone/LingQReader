@@ -42,7 +42,8 @@ def GetText():
   text = data['text']
   
   # Do a simple replace
-  text = text.replace('</p><p>',' </p><p> ')
+  text = text.replace('<p>','')
+  text = text.replace('</p>',' </p> ')
   
   return text
 

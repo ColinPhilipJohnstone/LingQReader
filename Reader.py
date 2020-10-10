@@ -285,11 +285,13 @@ class LingQReader(arcade.Window):
       # Loop over words in word_list and check each one against LingQs
       for word_sprite in word_list.sprite_list:
         
-        print('...',word_sprite.word,self.unknownList)
+        
+        # If this is not a real word, move on to next one
+        if word_sprite.word == -1:
+          continue
         
         # Check if this is a LingQ
-        if GetBasicWord(word_sprite.word) in self.unknownList:
-          print("here")
+        if word_sprite.word in self.unknownList:
           
           # Make image for this LingQ
           image = get_unknown_image(text=word_sprite.wordRaw)
@@ -342,10 +344,10 @@ class LingQReader(arcade.Window):
     arcade.start_render()
     
     # Display unknown
-    self.page_unknown_list[self.nPageCurrent].draw()
+    #self.page_unknown_list[self.nPageCurrent].draw()
     
     # Display LingQs
-    self.page_lingq_list[self.nPageCurrent].draw()
+    #self.page_lingq_list[self.nPageCurrent].draw()
     
     # Display words
     self.page_word_list[self.nPageCurrent].draw()
@@ -685,22 +687,23 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
-  def ignoreWord(self,term):
+  def ignoreLingQ(self,term):
     
-    """Takes term, sets all words with this term to ignored."""
+    """Takes term, sets all LingQs with this term to ignored."""
     
     # If it is a LingQ then delete it from the records
-    if term in self.lingqsDict:
-      print("ignoring word is LingQ")
+    #if term in self.lingqsDict:
+      #index = self.lingqsDict[term]
+      
+      #print("ignoring word is LingQ")
     
-    
-    #self.lingqs
-    
-    
-    
-    ## Loop over pages and make sure not LingQ or unknown
+    # Loop over pages and make sure not LingQ or unknown
     #for iPage in range(0,len(self.page_lingq_list)):
       
+      # Make new 
+      
+      # Loop over LingQs and see if any are this term
+      #fo
     
     # Set to ignored online
     
@@ -823,7 +826,7 @@ def get_unknown_image(text,text_color=arcade.color.BLACK,font_size=FONT_SIZE,wid
 def GetBasicWord(string):
   
   """Takes string with word, returns string with punctuation removed and lowercase."""
-  print(string)
+  
   # Make sure there is at least one real letter in word and return -1 if not
   isWord = False
   for char in string:
