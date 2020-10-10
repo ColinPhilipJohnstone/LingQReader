@@ -344,10 +344,10 @@ class LingQReader(arcade.Window):
     arcade.start_render()
     
     # Display unknown
-    #self.page_unknown_list[self.nPageCurrent].draw()
+    self.page_unknown_list[self.nPageCurrent].draw()
     
     # Display LingQs
-    #self.page_lingq_list[self.nPageCurrent].draw()
+    self.page_lingq_list[self.nPageCurrent].draw()
     
     # Display words
     self.page_word_list[self.nPageCurrent].draw()
@@ -407,9 +407,6 @@ class LingQReader(arcade.Window):
             # If in a hint box, do something
             if type(inStatus) == int:
               
-              # Get term
-              term = self.displayBubble.term
-              
               # Get the hint
               hint = self.displayBubble.hints[inStatus]
               
@@ -422,7 +419,8 @@ class LingQReader(arcade.Window):
             
             # If in the ignore, ignore the word
             if inStatus == 'X':
-              print("ignore word")
+              term = self.displayBubble.term
+              self.ignoreUnknown(term)
             
       
     # Loop over LingQs on screen 
@@ -555,7 +553,7 @@ class LingQReader(arcade.Window):
       new_extended_status = -1
     
     if shouldDelete:
-      self.ignoreWord(termlingq)
+      self.ignoreLingQ(termlingq)
       return
     
     # Get index of this LingQ
@@ -687,25 +685,61 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
+  def ignoreUnknown(self,term):
+    
+    """Takes term, sets all LingQs with this term to ignored."""
+    
+    # Loop over pages
+    for iPage in range(0,len(self.page_lingq_list)):
+      
+      # Start new sprite lists for LingQs on this page
+      unknown_sprite_list_new = arcade.SpriteList()
+      
+      # Loop over all unknown words on page
+      for iWord in range(0,len(self.page_unknown_list[iPage].sprite_list)):
+        
+        # Get sprite for this unknown word
+        unknown_sprite = self.page_unknown_list[iPage].sprite_list[iWord]
+  
+        # If this is not the unknown word to delete, add it to the list
+        if not unknown_sprite.word == term:
+          unknown_sprite_list_new.append(unknown_sprite)
+      
+      # Save the new sprite list
+      self.page_unknown_list[iPage] = unknown_sprite_list_new
+      
+    # Set to ignored online
+    lingqapi.IgnoreWord(term)
+    
+    return
+  
+  #---------------------------------------------------------------
+  
   def ignoreLingQ(self,term):
     
     """Takes term, sets all LingQs with this term to ignored."""
     
-    # If it is a LingQ then delete it from the records
-    #if term in self.lingqsDict:
-      #index = self.lingqsDict[term]
-      
-      #print("ignoring word is LingQ")
-    
     # Loop over pages and make sure not LingQ or unknown
-    #for iPage in range(0,len(self.page_lingq_list)):
+    for iPage in range(0,len(self.page_lingq_list)):
       
-      # Make new 
+      # Start new sprite lists for LingQs on this page
+      lingq_sprite_list_new = arcade.SpriteList()
       
-      # Loop over LingQs and see if any are this term
-      #fo
-    
+      # Loop over all LingQs on page
+      for iWord in range(0,len(self.page_lingq_list[iPage].sprite_list)):
+        
+        # Get sprite for this LingQ
+        lingq_sprite = self.page_lingq_list[iPage].sprite_list[iWord]
+  
+        # If this is not the LingQ to delete, add it to the list
+        if not lingq_sprite.word == term:
+          lingq_sprite_list_new.append(lingq_sprite)
+      
+      # Save the new sprite list
+      self.page_lingq_list[iPage] = lingq_sprite_list_new
+      
     # Set to ignored online
+    lingqapi.IgnoreWord(term)
     
     return
   

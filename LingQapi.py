@@ -34,9 +34,8 @@ def GetText():
   headers = {'Authorization': 'Token {}'.format(API_KEY)}
   
   # Request data
-  print('a')
   r = requests.get( url=URL , headers=headers )
-  print('b')
+  
   # Get text
   data = r.json() 
   text = data['text']
@@ -70,8 +69,6 @@ def GetUnknownWords():
   unknownList = []
   for word in data:
     unknownList.append(word['word'])
-  
-  print(unknownList)
   
   return unknownList
 
