@@ -525,6 +525,8 @@ class LingQReader(arcade.Window):
     
     """Takes LingQ id and changes the status."""
     
+    print("---",idlingq,termlingq,newstatus)
+    
     # Holds if should delete LingQ
     shouldDelete = False
     
@@ -658,9 +660,12 @@ class LingQReader(arcade.Window):
       # Save the new sprite list
       self.page_unknown_list[iPage] = unknown_sprite_list_new
     
+    # Change the LingQ remotely
+    idlingq = lingqapi.CreateLingQ(term,hint['text'])
+    
     # Make a dictionary for this LingQ
     LingQdict = {}
-    LingQdict['id'] = -1
+    LingQdict['id'] = idlingq
     LingQdict['term'] = term
     LingQdict['word'] = -1
     LingQdict['hints'] = [hint]
@@ -673,9 +678,6 @@ class LingQReader(arcade.Window):
     # Add to self.lingqs and self.lingqsDict
     self.lingqs.append(LingQdict)
     self.lingqsDict[term] = len(self.lingqs)-1
-    
-    # Change the LingQ remotely
-    lingqapi.CreateLingQ(term,hint['text'])
     
     
     return
@@ -984,8 +986,14 @@ class UnknownBubble:
       if nHints > 1:
         text += str(iHint+1)+". "
       
-      # Add popularity
-      text += "(" + str( hints[iHint]['popularity'] ) + ") "
+      # Add popularity if it is there
+      if 'popularity' in hints[iHint]:
+        text += "(" + str( hints[iHint]['popularity'] ) + ") "
+      
+      # Add google if from google
+      if 'from_google' in hints[iHint]:
+        if hints[iHint]['from_google']:
+          text += "(google) "
       
       # Add text of hint
       text += hints[iHint]['text']

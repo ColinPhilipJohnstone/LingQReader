@@ -199,8 +199,6 @@ def CreateLingQ(word,hint_text):
   
   """Retrieves hints for all words in a list of words."""
   
-  print(word,hint_text)
-  
   # Set the URL for this task
   URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lingqs/'
   
@@ -209,19 +207,20 @@ def CreateLingQ(word,hint_text):
   
   # Params for creating the LingQ
   params = { "hints":[{"locale": "en", "text":hint_text}] , "term": word , "lesson":LESSON }
-
-  #r = requests.post(url=URL, headers=headers, json=params)
-  #print(r)
   
+  # Do post
+  r = requests.post(url=URL, headers=headers, json=params)
   
-  #post(URL,headers,params)
+  # Get id
+  data = r.json()
+  idlingq = data['id']
   
   # Make change without waiting for it to finish
-  p = mp.Process(target=post,args=(URL,headers,params))
-  p.daemon = True
-  p.start()
+  #p = mp.Process(target=post,args=(URL,headers,params))
+  #p.daemon = True
+  #p.start()
   
-  return
+  return idlingq
 
 #linguist@qa:~ % curl -X POST -d '{"status": 3, "fragment": "siete", \
 #"hints": [{"locale": "en", "text": "hour"}], "term": "siete horas"}' \
