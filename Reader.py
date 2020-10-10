@@ -80,7 +80,17 @@ class LingQReader(arcade.Window):
   #---------------------------------------------------------------
   
   def __init__(self):
+    
+    self.setup_window()
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def setup_window(self):
     global SCREEN_WIDTH , SCREEN_HEIGHT
+    
+    """Sets up the window."""
     
     # Call the parent class initializer
     super().__init__(SCREEN_WIDTH,SCREEN_HEIGHT,SCREEN_TITLE,fullscreen=FULLSCREEN)
@@ -88,24 +98,17 @@ class LingQReader(arcade.Window):
     # Get new size if fullscreen
     if FULLSCREEN:
       SCREEN_WIDTH, SCREEN_HEIGHT = self.get_size()
-    
-    # Holds if already displayed text
-    self.Diplayed = None
-    
-    return
   
-  #---------------------------------------------------------------
-  
-  def setup(self):
-    
     # Set background color
     arcade.set_background_color(arcade.color.WHITE)
     
-    # Set text to not displayed
-    self.Diplayed = False
+  return
+  
+  #---------------------------------------------------------------
+  
+  def setup_lesson(self):
     
     # Load full text
-    #self.text = ReadText("ExampleText.txt")
     self.text = lingqapi.GetText()
         
     # Load LingQs in text
@@ -668,21 +671,6 @@ def get_unknown_image(text,text_color=arcade.color.BLACK,font_size=FONT_SIZE,wid
 
 #=====================================================================================
 
-def ReadText(filename):
-  
-  with open(filename,'r') as f:
-    content = f.readlines()
-  
-  text = ''
-  for line in content:
-    if line.replace(' ','') == '\n':
-      text += ' '+PARAGRAPH_STRING+' '
-    text += line.replace('\n',' ')
-  
-  return text
-
-#=====================================================================================
-
 def GetBasicWord(string):
   
   """Takes string with word, returns string with punctuation removed and lowercase."""
@@ -1064,7 +1052,7 @@ def clickedNextPage(x,y):
 def main():
   """Main method"""
   window = LingQReader()
-  window.setup()
+  window.setup_lesson()
   arcade.run()
   return
 
