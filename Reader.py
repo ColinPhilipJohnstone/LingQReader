@@ -105,6 +105,9 @@ class LingQReader(arcade.Window):
     self.inMainMenu = True
     self.inLesson = False
     
+    # Assume no lesson loaded
+    self.contentId = -1
+    
     return
   
   #---------------------------------------------------------------
@@ -233,6 +236,9 @@ class LingQReader(arcade.Window):
   #---------------------------------------------------------------
   
   def setup_lesson(self,lesson):
+    
+    # Save lesson id
+    self.contentId = lesson['contentId']
     
     # Load full text
     self.text = lingqapi.GetText(lesson['contentId'])
@@ -467,6 +473,18 @@ class LingQReader(arcade.Window):
     self.exit_button_sprite = exit_sprite
     
     #---------------------------
+    # Finish button
+    
+    # Get sprite
+    finish_sprite = arcade.Sprite("data/tick_icon.png",EXIT_BUTTON_SCALING)
+    finish_sprite.center_x = SCREEN_WIDTH - MARGIN_WIDTH
+    finish_sprite.center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
+    hud_sprite_list.append(finish_sprite)
+    
+    # Save the button sprite
+    self.finish_button_sprite = finish_sprite
+    
+    #---------------------------
     # Arrows
     
     # Get sprite for forward arrow
@@ -520,8 +538,9 @@ class LingQReader(arcade.Window):
   
   def load_lesson(self,lesson):
     
-    # Setup the lesson
-    self.setup_lesson(lesson)
+    # Setup the lesson if this is not already loaded
+    if not lesson['contentId'] == self.contentId:
+      self.setup_lesson(lesson)
     
     # Change from menu to lesson
     self.inMainMenu = False
@@ -542,6 +561,14 @@ class LingQReader(arcade.Window):
     
     # Change background color
     arcade.set_background_color(MENU_BACKGROUND_COLOR)
+    
+    return
+  
+  #---------------------------------------------------------------
+
+  def finish_lesson(self):
+    
+    print("finishing")
     
     return
   
@@ -682,6 +709,11 @@ class LingQReader(arcade.Window):
       if self.showHud:
         if inBoxSprite(x,y,self.exit_button_sprite):
           self.return_to_menu()
+      
+      # Check for finish button if hud is shown
+      if self.showHud:
+        if inBoxSprite(x,y,self.finish_button_sprite):
+          self.finish_lesson()
       
       # Check for previous page
       if clickedPreviousPage(x,y):
@@ -1119,11 +1151,10 @@ class LingQReader(arcade.Window):
     # Display words
     self.page_word_list[self.nPageCurrent].draw()
     
-    # Display exit button if required
+    # Display hud if required
     if self.showHud:
       self.hud_sprite_list.draw()
       self.hud_shape_list.draw()
-
     
     # Display bubble if there is one
     if not self.displayBubble is None:
