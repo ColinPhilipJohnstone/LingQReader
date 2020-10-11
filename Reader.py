@@ -43,7 +43,7 @@ LINGQ_WIDTH_FACTOR = 1.02
 LINGQ_HEIGHT_FACTOR = 1.15
 
 # Bubble properties
-BUBBLE_WIDTH = int(SCREEN_WIDTH/2.1)
+BUBBLE_WIDTH = int(SCREEN_WIDTH/1.7)
 BUBBLE_HEIGHT = int(BUBBLE_WIDTH/1.8)
 BUBBLE_MARGIN = int(BUBBLE_WIDTH/20.0)
 FONT_SIZE_BUBBLE_TERM = 20
@@ -52,6 +52,9 @@ BUBBLE_HINT_SPACING = 30
 BUBBLE_STATUS_WIDTH = int(min(50,(BUBBLE_WIDTH-2*BUBBLE_MARGIN)/6.0))
 BUBBLE_STATUS_HEIGHT = BUBBLE_STATUS_WIDTH
 BUBBLE_MAX_HINTS = 3
+
+# Some HUD properties
+EXIT_BUTTON_SCALING = 0.1
 
 # Colors 
 LINGQ_HIGHLIGHT_COLOR_1 = (255,255,0,255)
@@ -120,8 +123,9 @@ class LingQReader(arcade.Window):
     # Load unknown words
     self.unknownList , self.unknownIdDict = lingqapi.GetUnknownWords()
     
-    # Get hints for unknown words
+    # Get hints for unknown words and for LingQs
     lingqapi.GetLingQHintsList(self.unknownList)
+    lingqapi.GetLingQHintsList(dict_to_list(self.lingqsDict))
     
     # Setup text
     self.page_word_list = self.setup_text()
@@ -131,8 +135,9 @@ class LingQReader(arcade.Window):
     self.page_lingq_list = self.setup_lingqs()
     self.page_unknown_list = self.setup_unknown()
     
-    # Setup buttons on page
-    self.exit_button_list = self.setup_page_buttons()
+    # Setup HUD on page
+    self.exit_button_list = self.setup_page_hud()
+    self.hud_sprite_list , self.hud_shape_list = self.setup_page_hud()
     
     # Start on first page
     self.nPageCurrent = 0
@@ -140,8 +145,8 @@ class LingQReader(arcade.Window):
     # Assume no bubble to display
     self.displayBubble = None
     
-    # Assume not trying to exit
-    self.attemptExit = False
+    # Assume not showing the hud
+    self.showHud = False
     
     # Assuming not clicking change status button
     self.clickingStatus = False
@@ -320,25 +325,29 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
-  def setup_page_buttons(self):
+  def setup_page_hud(self):
     
     
-    # EXIT BUTTON
+    #---------------------------
     
-    # Make shape list for bubble
-    exit_button_list = arcade.ShapeElementList()
+    # Make sprite and shape lists for hud
+    hud_sprite_list = arcade.SpriteList()
+    hud_shape_list = arcade.ShapeElementList()
     
-    # Main box
-    shape = arcade.create_rectangle_filled(SCREEN_WIDTH/10.0,SCREEN_HEIGHT-0.5*MARGIN_HEIGHT,SCREEN_WIDTH/5.0,MARGIN_HEIGHT,EXIT_BUTTON_COLOR)
-    exit_button_list.append(shape)
+    #---------------------------
+    # Exit button
     
-    ## Outline of box
-    #shape = arcade.create_rectangle_outline(self.xCenter,self.yCenter,self.width,self.height,arcade.color.BLACK,1)
-    #exit_button_list.append(shape)
-    #shape = arcade.create_rectangle_outline(self.xCenter,self.yCenter,self.width,self.height,arcade.color.BLACK,1,180.0)
-    #exit_button_list.append(shape)
+    # Draw explosion
+    exit = arcade.Sprite("data/close_icon.png",EXIT_BUTTON_SCALING)
+    exit.center_x = MARGIN_WIDTH
+    exit.center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
+    hud_sprite_list.append(exit)
     
-    return exit_button_list
+    #---------------------------
+    
+    
+    
+    return hud_sprite_list , hud_shape_list
   
   #---------------------------------------------------------------
   
@@ -474,12 +483,12 @@ class LingQReader(arcade.Window):
     if clickObject is None:
       
       # Check for exit button
-      if clickedExit(x,y):
-        clickObject = 'exit'
-        if self.attemptExit:
-          sys.exit()
+      if clickedOpenHud(x,y):
+        clickObject = 'openHud'
+        if self.showHud:
+          self.showHud = False
         else:
-          self.attemptExit = True
+          self.showHud = True
       
       # Check for previous page
       if clickedPreviousPage(x,y):
@@ -502,9 +511,9 @@ class LingQReader(arcade.Window):
     if clickObject == 'bubble':
       self.displayBubble = None
     
-    # If clicked on anything but exit button, make sure self.attemptExit is False
-    if not clickObject == 'exit':
-      self.attemptExit = False
+    # If anywhere but showHud, make sure hud is not shown
+    if not clickObject == 'openHud':
+      self.showHud = False
     
     return
   
@@ -855,8 +864,10 @@ class LingQReader(arcade.Window):
     self.page_word_list[self.nPageCurrent].draw()
     
     # Display exit button if required
-    if self.attemptExit:
-      self.exit_button_list.draw()
+    if self.showHud:
+      self.hud_sprite_list.draw()
+      self.hud_shape_list.draw()
+
     
     # Display bubble if there is one
     if not self.displayBubble is None:
@@ -1085,6 +1096,14 @@ class UnknownBubble:
     else:
       xCenter = word_sprite.center_x + 0.5*self.width
     
+    # Move bubble right if off left side of screen
+    if ( xCenter - 0.5*self.width ) < MARGIN_WIDTH:
+      xCenter = MARGIN_WIDTH + 0.5*self.width
+    
+    # Move bubble left if off right side of screen
+    if ( xCenter + 0.5*self.width ) > SCREEN_WIDTH-MARGIN_WIDTH:
+      xCenter = SCREEN_WIDTH - MARGIN_WIDTH - 0.5*self.width
+      
     # Be default put bubble below word, but determine if it should be above
     if word_sprite.center_y - self.height < 0.05*SCREEN_HEIGHT:
       # Above
@@ -1182,7 +1201,7 @@ class UnknownBubble:
           text += "(google) "
       
       # Add text of hint
-      text += hints[iHint]['text']
+      text += hints[iHint]['text'].replace('\n','')
       
       # Made image out of word
       image = get_text_image(text=text,font_size=FONT_SIZE_BUBBLE_HINT,width=self.width-4*BUBBLE_MARGIN)
@@ -1397,6 +1416,14 @@ class LingQBubble:
     else:
       xCenter = word_sprite.center_x + 0.5*self.width
     
+    # Move bubble right if off left side of screen
+    if ( xCenter - 0.5*self.width ) < MARGIN_WIDTH:
+      xCenter = MARGIN_WIDTH + 0.5*self.width
+    
+    # Move bubble left if off right side of screen
+    if ( xCenter + 0.5*self.width ) > SCREEN_WIDTH-MARGIN_WIDTH:
+      xCenter = SCREEN_WIDTH - MARGIN_WIDTH - 0.5*self.width
+    
     # Be default put bubble below word, but determine if it should be above
     if word_sprite.center_y - self.height < 0.05*SCREEN_HEIGHT:
       # Above
@@ -1432,6 +1459,9 @@ class LingQBubble:
     
     # Make a sprite list for contents of bubble
     bubble_sprite_list = arcade.SpriteList()
+    
+    # Make shape list for boxes
+    term_shape_list = arcade.ShapeElementList()
     
     #------------------------------------------------
     # TERM
@@ -1480,7 +1510,7 @@ class LingQBubble:
         text += str(iHint+1)+". "
       
       # Add text of hint
-      text += lingq['hints'][iHint]['text']
+      text += lingq['hints'][iHint]['text'].replace('\n','')
       
       # Made image out of word
       image = get_text_image(text=text,font_size=FONT_SIZE_BUBBLE_HINT,width=self.width-4*BUBBLE_MARGIN)
@@ -1510,7 +1540,7 @@ class LingQBubble:
       hints = lingqapi.GetLingQHints(lingq['term'])
       
       # Get number to show
-      nHintsShow += - BUBBLE_MAX_HINTS
+      nHintsShow = BUBBLE_MAX_HINTS - nHintsShow
       
       for iHint in range(0,nHintsShow):
         
@@ -1531,7 +1561,7 @@ class LingQBubble:
             text += "(google) "
         
         # Add text of hint
-        text += hints[iHint]['text']
+        text += hints[iHint]['text'].replace('\n','')
         
         # Made image out of word
         image = get_text_image(text=text,font_size=FONT_SIZE_BUBBLE_HINT,width=self.width-4*BUBBLE_MARGIN)
@@ -1552,27 +1582,24 @@ class LingQBubble:
         center_y += -BUBBLE_HINT_SPACING-0.5*text_sprite.height
       
         # Add word to list
-        hint_sprite_list.append(text_sprite)
+        bubble_sprite_list.append(text_sprite)
         
         # NOW DO THE BOX
         
         # Main box
         shape = arcade.create_rectangle_filled(text_sprite.center_x,text_sprite.center_y,text_sprite.width,text_sprite.height,UNKNOWN_HINT_BOX_COLOR)
-        hint_shape_list.append(shape)
+        term_shape_list.append(shape)
         
         # Outline of box
         shape = arcade.create_rectangle_outline(text_sprite.center_x,text_sprite.center_y,text_sprite.width,text_sprite.height,arcade.color.BLACK,1)
-        hint_shape_list.append(shape)
+        term_shape_list.append(shape)
         shape = arcade.create_rectangle_outline(text_sprite.center_x,text_sprite.center_y,text_sprite.width,text_sprite.height,arcade.color.BLACK,1,180.0)
-        hint_shape_list.append(shape)
-      
-      
+        term_shape_list.append(shape)
     
     #------------------------------------------------
     # STATUS
     
     # Get central y positions of buttons 
-    #center_y += -0.5*BUBBLE_STATUS_HEIGHT
     center_y = self.yCenter - 0.5*self.height + BUBBLE_MARGIN + 0.5*BUBBLE_STATUS_HEIGHT
     
     # Get centers of all six buttons in x coordinates
@@ -1607,9 +1634,6 @@ class LingQBubble:
       
       # Add word to word list
       bubble_sprite_list.append(text_sprite)
-    
-    # Make shape list for boxes
-    term_shape_list = arcade.ShapeElementList()
     
     # Determine which box is the current status 
     if self.lingq['status'] == 0:
@@ -1712,11 +1736,11 @@ class LingQBubble:
 
 #=====================================================================================
 
-def clickedExit(x,y):
+def clickedOpenHud(x,y):
   
-  """Takes coordinate of click, determines if exit was clicked."""
+  """Takes coordinate of click, determines if open hud button."""
   
-  if ( x < SCREEN_WIDTH/5.0 ) and ( y > SCREEN_HEIGHT-MARGIN_HEIGHT ):
+  if y > SCREEN_HEIGHT-MARGIN_HEIGHT:
     return True
   
   return False
@@ -1742,6 +1766,18 @@ def clickedNextPage(x,y):
     return True
   
   return False
+
+#=====================================================================================
+
+def dict_to_list(dictIn):
+  
+  """Takes dictionary, returns list of items in dictionary."""
+  
+  listOut = []
+  for item in dictIn:
+    listOut.append(item)
+  
+  return listOut
 
 #=====================================================================================
 
