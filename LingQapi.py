@@ -6,6 +6,7 @@ Functions for using the LingQ API.
 import requests
 import json
 import multiprocessing as mp
+import copy
 
 # API key for my account
 API_KEY = "408fa561d040f932be1f3303e50e426794fda139"
@@ -18,6 +19,8 @@ LANGUAGE = 'de'
 #LESSON = '35644' # shorter
 LESSON = '5113948' # really short
 
+# Maximum character limit on url
+URL_LENGTH_LIMIT = 2000
 
 # Dictionary for saving hints that have already been looked for
 unknown_hints = {}
@@ -164,18 +167,43 @@ def GetLingQHints(word):
 #=====================================================================================
 
 def GetLingQHintsList(word_list):
-  global unknown_hints
   
-  """Retrieves hints for all words in a list of words."""
-  
-  print(word_list)
+  """Retrieves hints for all words in a list of words and adds to unknown_hints."""
   
   # Set the URL for this task
   URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/hints/?'
   
+  # To keep track of words added
+  words_list_added = []
+  
   # Loop over words and add each to URL
   for word in word_list:
+    
+    # Get potential URL with this word added
+    URLpossible = copy.deepcopy(URL)
+    URLpossible += 'word='+word + '&'
+    
+    # If this URL is too long, get word list for what is already there and restart
+    if len(URLpossible) > URL_LENGTH_LIMIT:
+      _GetLingQHintsList(URL,words_list_added)
+      URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/hints/?'
+      words_list_added = []
+    
+    # Add this one to the URL
     URL += 'word='+word + '&'
+    
+    # Add to words_list_added
+    words_list_added.append(word)
+  
+  # Now at end so add the final words
+  _GetLingQHintsList(URL,words_list_added)
+  
+  return
+
+#-----------------------------------------
+
+def _GetLingQHintsList(URL,words_list_added):
+  global unknown_hints
   
   # Authorisation stuff
   headers = {'Authorization': 'Token {}'.format(API_KEY)}
@@ -187,7 +215,7 @@ def GetLingQHintsList(word_list):
   data = r.json()
   
   # Loop over words and add hint list for each
-  for word in word_list:
+  for word in words_list_added:
     unknown_hints[word] = data[word]
   
   return
