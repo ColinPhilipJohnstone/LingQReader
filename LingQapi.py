@@ -48,12 +48,12 @@ def GetRecentLessons(nLessons):
 
 #=====================================================================================
 
-def GetText():
+def GetText(contentId):
   
   """Returns text of the lesson."""
   
   # Set the URL for this task
-  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+LESSON+'/text/'
+  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+str(contentId)+'/text/'
   
   # Authorisation stuff
   headers = {'Authorization': 'Token {}'.format(API_KEY)}
@@ -73,12 +73,12 @@ def GetText():
 
 #=====================================================================================
 
-def GetUnknownWords():
+def GetUnknownWords(contentId):
   
   """Get's unknown words from lesson."""
   
   # Set the URL for this task
-  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+LESSON+'/words/'
+  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+str(contentId)+'/words/'
   
   # Authorisation stuff
   headers = {'Authorization': 'Token {}'.format(API_KEY)}
@@ -104,12 +104,12 @@ def GetUnknownWords():
 
 #=====================================================================================
 
-def GetLingQs():
+def GetLingQs(contentId):
   
   """Get's LingQs for a lesson."""
   
   # Set the URL for this task
-  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+LESSON+'/lingqs/'
+  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+str(contentId)+'/lingqs/'
   
   # Authorisation stuff
   headers = {'Authorization': 'Token {}'.format(API_KEY)}
@@ -313,24 +313,24 @@ def MakeKnownWord(word):
 
 #=====================================================================================
 
-def MakeAllKnown():
+#def MakeAllKnown():
   
-  """Makes all unknown words in lesson known."""
+  #"""Makes all unknown words in lesson known."""
   
-  # Set the URL for this task
-  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+LESSON+'/stats/'
+  ## Set the URL for this task
+  #URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+LESSON+'/stats/'
   
-  print(URL)
+  #print(URL)
   
-  # Authorisation stuff
-  headers = { 'Authorization':'Token {}'.format(API_KEY) }
+  ## Authorisation stuff
+  #headers = { 'Authorization':'Token {}'.format(API_KEY) }
   
-  # Do post
-  r = requests.post(url=URL, headers=headers)
-  print(r)
-  print(r.json())
+  ## Do post
+  #r = requests.post(url=URL, headers=headers)
+  #print(r)
+  #print(r.json())
   
-  return
+  #return
 
 #=====================================================================================
 

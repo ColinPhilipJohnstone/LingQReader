@@ -64,6 +64,7 @@ EXIT_BUTTON_SCALING = 0.15
 ARROW_BUTTON_SCALING = 0.15
 
 # Colors 
+LESSON_BACKGROUND_COLOR = arcade.color.WHITE
 LINGQ_HIGHLIGHT_COLOR_1 = (255,255,0,255)
 LINGQ_HIGHLIGHT_COLOR_2 = (255,255,0,120)
 LINGQ_HIGHLIGHT_COLOR_3 = (255,255,0,55)
@@ -102,8 +103,6 @@ class LingQReader(arcade.Window):
     
     # Assume in main menu to start
     self.inMainMenu = True
-    
-    # Assume not in lesson
     self.inLesson = False
     
     return
@@ -122,7 +121,7 @@ class LingQReader(arcade.Window):
     if FULLSCREEN:
       SCREEN_WIDTH, SCREEN_HEIGHT = self.get_size()
   
-    # Set background color
+    # Set background color to the menu
     arcade.set_background_color(MENU_BACKGROUND_COLOR)
     
     return
@@ -233,16 +232,16 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
-  def setup_lesson(self):
+  def setup_lesson(self,lesson):
     
     # Load full text
-    self.text = lingqapi.GetText()
+    self.text = lingqapi.GetText(lesson['contentId'])
         
     # Load LingQs in text
-    self.lingqsDict , self.lingqs = lingqapi.GetLingQs()
+    self.lingqsDict , self.lingqs = lingqapi.GetLingQs(lesson['contentId'])
     
     # Load unknown words
-    self.unknownList , self.unknownIdDict = lingqapi.GetUnknownWords()
+    self.unknownList , self.unknownIdDict = lingqapi.GetUnknownWords(lesson['contentId'])
     
     # Get hints for unknown words and for LingQs
     lingqapi.GetLingQHintsList(self.unknownList)
@@ -506,6 +505,43 @@ class LingQReader(arcade.Window):
     
     """Take mouse click, determine what to do if in main menu."""
     
+    # Check for exit button
+    if inBoxSprite(x,y,self.menu_exit_button_sprite):
+      sys.exit()
+    
+    # Check for each of the lessons
+    for iLesson in range(0,NLESSONS_MENU):
+      if inBoxSprite(x,y,self.lesson_sprite_list[iLesson]):
+        self.load_lesson(self.lessons[iLesson])
+      
+    return
+  
+  #---------------------------------------------------------------
+  
+  def load_lesson(self,lesson):
+    
+    # Setup the lesson
+    self.setup_lesson(lesson)
+    
+    # Change from menu to lesson
+    self.inMainMenu = False
+    self.inLesson = True
+    
+    # Change background color
+    arcade.set_background_color(LESSON_BACKGROUND_COLOR)
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def return_to_menu(self):
+    
+    # Change from lesson to menu
+    self.inMainMenu = True
+    self.inLesson = False
+    
+    # Change background color
+    arcade.set_background_color(MENU_BACKGROUND_COLOR)
     
     return
   
@@ -645,7 +681,7 @@ class LingQReader(arcade.Window):
       # Check for exit button if hud is shown
       if self.showHud:
         if inBoxSprite(x,y,self.exit_button_sprite):
-          sys.exit()
+          self.return_to_menu()
       
       # Check for previous page
       if clickedPreviousPage(x,y):
@@ -1991,7 +2027,7 @@ if __name__ == "__main__":
   window = LingQReader()
   
   # Setup the lesson
-  window.setup_lesson()
+  #window.setup_lesson()
   
   # Run the game
   arcade.run()
