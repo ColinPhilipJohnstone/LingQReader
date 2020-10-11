@@ -28,6 +28,12 @@ SCREEN_HEIGHT = 800
 SCREEN_TITLE = "Colin's LingQ Reader"
 FULLSCREEN = False
 
+# Main menu properties
+NLESSONS_MENU = 10
+FONT_SIZE_LESSON_LIST = 20
+MENU_BACKGROUND_COLOR = arcade.color.WATERSPOUT
+MENU_LESSON_BUTTON_COLOR = arcade.color.AZURE_MIST
+
 # Margins
 MARGIN_WIDTH = SCREEN_WIDTH/20.0
 MARGIN_HEIGHT = SCREEN_HEIGHT/10.0
@@ -88,7 +94,17 @@ class LingQReader(arcade.Window):
   
   def __init__(self):
     
+    # Setup the window
     self.setup_window()
+    
+    # Setup the menu
+    self.setup_menu()
+    
+    # Assume in main menu to start
+    self.inMainMenu = True
+    
+    # Assume not in lesson
+    self.inLesson = False
     
     return
   
@@ -107,7 +123,111 @@ class LingQReader(arcade.Window):
       SCREEN_WIDTH, SCREEN_HEIGHT = self.get_size()
   
     # Set background color
-    arcade.set_background_color(arcade.color.WHITE)
+    arcade.set_background_color(MENU_BACKGROUND_COLOR)
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def setup_menu(self):
+    
+    """Sets up the main menu."""
+    
+    # Get lessons for this language
+    self.lessons = lingqapi.GetRecentLessons(NLESSONS_MENU)
+    
+    # Setup sprite and shape lists for main menu
+    self.setup_menu_lesson_list(self.lessons)
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def setup_menu_lesson_list(self,lessons):
+    
+    """Set's up buttons in main menu."""
+    
+    #---------------------------
+    # Exit button
+    
+    # Get sprite
+    exit_sprite = arcade.Sprite("data/close_icon.png",EXIT_BUTTON_SCALING)
+    exit_sprite.center_x = SCREEN_WIDTH/2
+    exit_sprite.center_y = int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))/2.0
+    
+    # Save the button sprite
+    self.menu_exit_button_sprite = exit_sprite
+    
+    #---------------------------
+    # Lesson buttons
+    
+    # Get center x position of buttons
+    center_x = 0.5*SCREEN_WIDTH
+    
+    # Get center y of first lesson button
+    center_y = SCREEN_HEIGHT - int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
+    
+    # Make sprite and shape lists for buttons
+    lesson_sprite_list = arcade.SpriteList()
+    lesson_shape_list = arcade.ShapeElementList()
+    
+    # Loop over lessons to show
+    for iLesson in range(0,NLESSONS_MENU):
+      
+      # Get basic lesson data
+      title = lessons[iLesson]['title']
+      
+      # Start text to write
+      text = ''
+      
+      # Add lesson title to text
+      text += title
+      
+      # Made image out of word
+      image = get_text_image(text=text,font_size=FONT_SIZE_LESSON_LIST,width=int(SCREEN_WIDTH-2*MARGIN_WIDTH))
+      
+      # Make sprite from image
+      button_sprite = WordSprite()
+      button_sprite.SetWord(text)
+      button_sprite._texture = arcade.Texture(text)
+      button_sprite.texture.image = image
+      button_sprite.width = image.width
+      button_sprite.height = image.height
+      
+      # Set position of word
+      button_sprite.center_x = center_x
+      button_sprite.center_y = center_y
+      
+      # Get center_y of next lesson
+      center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
+    
+      # Add word to list
+      lesson_sprite_list.append(button_sprite)
+      
+      # Make background shape
+      shape = arcade.create_rectangle_filled(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,MENU_LESSON_BUTTON_COLOR)
+      lesson_shape_list.append(shape)
+      
+      # Outline of box
+      shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1)
+      lesson_shape_list.append(shape)
+      shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1,180.0)
+      lesson_shape_list.append(shape)
+      
+      # Do outline again if on final one
+      if iLesson == NLESSONS_MENU-1:
+        shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1)
+        lesson_shape_list.append(shape)
+        shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1,180.0)
+        lesson_shape_list.append(shape)
+    
+    #---------------------------
+    
+    # Save lists
+    self.lesson_sprite_list = lesson_sprite_list
+    self.lesson_shape_list = lesson_shape_list
+    
+    #---------------------------
     
     return
   
@@ -129,7 +249,7 @@ class LingQReader(arcade.Window):
     lingqapi.GetLingQHintsList(dict_to_list(self.lingqsDict))
     
     # Setup text
-    self.page_word_list = self.setup_text()
+    self.page_word_list = self.setup_lesson_text()
     self.nPages = len(self.page_word_list)
     
     # Setup LingQs and unknown
@@ -159,7 +279,7 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
-  def setup_text(self):
+  def setup_lesson_text(self):
     
     # Start list of word lists for each page
     page_word_list = []
@@ -363,35 +483,6 @@ class LingQReader(arcade.Window):
     hud_sprite_list.append(arrow_sprite)
     
     #---------------------------
-    # Boxes showing invisible hud regions
-    
-    ## Box for open and close hud
-    #center_x = 0.5*SCREEN_WIDTH
-    #center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
-    #width = SCREEN_WIDTH - 2.0*MARGIN_WIDTH
-    #height = MARGIN_HEIGHT
-    #shape = arcade.create_rectangle_outline(center_x,center_y,width,height,arcade.color.RED,1)
-    #hud_shape_list.append(shape)
-    
-    ## Box for page forward
-    #center_x = SCREEN_WIDTH - 0.5*MARGIN_WIDTH
-    #center_y = 0.5*SCREEN_HEIGHT
-    #width = MARGIN_WIDTH
-    #height = SCREEN_HEIGHT - 2*MARGIN_HEIGHT
-    #shape = arcade.create_rectangle_outline(center_x,center_y,width,height,arcade.color.RED,1)
-    #hud_shape_list.append(shape)
-    
-    ## Box for page backward
-    #center_x = 0.5*MARGIN_WIDTH
-    #center_y = 0.5*SCREEN_HEIGHT
-    #width = MARGIN_WIDTH
-    #height = SCREEN_HEIGHT - 2*MARGIN_HEIGHT
-    #shape = arcade.create_rectangle_outline(center_x,center_y,width,height,arcade.color.RED,1)
-    #hud_shape_list.append(shape)
-    
-    #---------------------------
-    
-    
     
     return hud_sprite_list , hud_shape_list
   
@@ -400,6 +491,29 @@ class LingQReader(arcade.Window):
   def on_mouse_press(self, x, y, button, modifiers):
     
     """Take mouse click, determine what to do."""
+    
+    # Call main menu or lesson
+    if self.inMainMenu:
+      self.on_mouse_press_mainmenu(x, y, button, modifiers)
+    elif self.inLesson:
+      self.on_mouse_press_lesson(x, y, button, modifiers)
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def on_mouse_press_mainmenu(self, x, y, button, modifiers):
+    
+    """Take mouse click, determine what to do if in main menu."""
+    
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def on_mouse_press_lesson(self, x, y, button, modifiers):
+    
+    """Take mouse click, determine what to do if in lesson."""
     
     # Assume initially clicked on blank space
     clickObject = None
@@ -902,8 +1016,39 @@ class LingQReader(arcade.Window):
   
   def on_draw(self):
     
+    """Main drawing function."""
+    
     # Start rendering
     arcade.start_render()
+    
+    # Determine if should draw main menu or lesson
+    if self.inMainMenu:
+      self.on_draw_mainmenu()
+    elif self.inLesson:
+      self.on_draw_lesson()
+    
+    return
+  
+  #---------------------------------------------------------------
+    
+  def on_draw_mainmenu(self):
+    
+    """For drawing main menu."""
+    
+    # Exit button
+    self.menu_exit_button_sprite.draw()
+    
+    # Lesson buttons
+    self.lesson_shape_list.draw()
+    self.lesson_sprite_list.draw()
+    
+    return 
+  
+  #---------------------------------------------------------------
+  
+  def on_draw_lesson(self):
+    
+    """For drawing lesson."""
     
     # Display unknown
     self.page_unknown_list[self.nPageCurrent].draw()

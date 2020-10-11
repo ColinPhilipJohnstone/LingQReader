@@ -24,6 +24,30 @@ unknown_hints = {}
 
 #=====================================================================================
 
+def GetRecentLessons(nLessons):
+  
+  """Takes number, returns list of this number of recent lessons for this language."""
+  
+  # The URL for this one is not on the API description but I found it using Firefox inspector (ctl+shift+I) 
+  # and going to network and XHR and refreshing the main page to see how it determines the lessons 
+  
+  # Set the URL for this task
+  URL = 'https://www.lingq.com/api/v2/de/lessons/recent/?page_size='+str(nLessons)+'&groupBy=collection&page=1'
+  
+  # Authorisation stuff
+  headers = {'Authorization': 'Token {}'.format(API_KEY)}
+  
+  # Request data
+  r = requests.get( url=URL , headers=headers )
+  
+  # Get list of lessons
+  data = r.json()
+  lessons = data['results']
+  
+  return lessons
+
+#=====================================================================================
+
 def GetText():
   
   """Returns text of the lesson."""
