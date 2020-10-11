@@ -54,7 +54,8 @@ BUBBLE_STATUS_HEIGHT = BUBBLE_STATUS_WIDTH
 BUBBLE_MAX_HINTS = 3
 
 # Some HUD properties
-EXIT_BUTTON_SCALING = 0.1
+EXIT_BUTTON_SCALING = 0.15
+ARROW_BUTTON_SCALING = 0.15
 
 # Colors 
 LINGQ_HIGHLIGHT_COLOR_1 = (255,255,0,255)
@@ -337,11 +338,56 @@ class LingQReader(arcade.Window):
     #---------------------------
     # Exit button
     
-    # Draw explosion
-    exit = arcade.Sprite("data/close_icon.png",EXIT_BUTTON_SCALING)
-    exit.center_x = MARGIN_WIDTH
-    exit.center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
-    hud_sprite_list.append(exit)
+    # Get sprite
+    exit_sprite = arcade.Sprite("data/close_icon.png",EXIT_BUTTON_SCALING)
+    exit_sprite.center_x = MARGIN_WIDTH
+    exit_sprite.center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
+    hud_sprite_list.append(exit_sprite)
+    
+    # Save the button sprite
+    self.exit_button_sprite = exit_sprite
+    
+    #---------------------------
+    # Arrows
+    
+    # Get sprite for forward arrow
+    arrow_sprite = arcade.Sprite("data/forward_arrow_icon.png",ARROW_BUTTON_SCALING)
+    arrow_sprite.center_x = SCREEN_WIDTH - 0.5*MARGIN_WIDTH
+    arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
+    hud_sprite_list.append(arrow_sprite)
+    
+    # Get sprite for backward arrow
+    arrow_sprite = arcade.Sprite("data/backward_arrow_icon.png",ARROW_BUTTON_SCALING)
+    arrow_sprite.center_x = 0.5*MARGIN_WIDTH
+    arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
+    hud_sprite_list.append(arrow_sprite)
+    
+    #---------------------------
+    # Boxes showing invisible hud regions
+    
+    ## Box for open and close hud
+    #center_x = 0.5*SCREEN_WIDTH
+    #center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
+    #width = SCREEN_WIDTH - 2.0*MARGIN_WIDTH
+    #height = MARGIN_HEIGHT
+    #shape = arcade.create_rectangle_outline(center_x,center_y,width,height,arcade.color.RED,1)
+    #hud_shape_list.append(shape)
+    
+    ## Box for page forward
+    #center_x = SCREEN_WIDTH - 0.5*MARGIN_WIDTH
+    #center_y = 0.5*SCREEN_HEIGHT
+    #width = MARGIN_WIDTH
+    #height = SCREEN_HEIGHT - 2*MARGIN_HEIGHT
+    #shape = arcade.create_rectangle_outline(center_x,center_y,width,height,arcade.color.RED,1)
+    #hud_shape_list.append(shape)
+    
+    ## Box for page backward
+    #center_x = 0.5*MARGIN_WIDTH
+    #center_y = 0.5*SCREEN_HEIGHT
+    #width = MARGIN_WIDTH
+    #height = SCREEN_HEIGHT - 2*MARGIN_HEIGHT
+    #shape = arcade.create_rectangle_outline(center_x,center_y,width,height,arcade.color.RED,1)
+    #hud_shape_list.append(shape)
     
     #---------------------------
     
@@ -482,13 +528,10 @@ class LingQReader(arcade.Window):
     # Check for clicking buttons
     if clickObject is None:
       
-      # Check for exit button
-      if clickedOpenHud(x,y):
-        clickObject = 'openHud'
-        if self.showHud:
-          self.showHud = False
-        else:
-          self.showHud = True
+      # Check for exit button if hud is shown
+      if self.showHud:
+        if inBoxSprite(x,y,self.exit_button_sprite):
+          sys.exit()
       
       # Check for previous page
       if clickedPreviousPage(x,y):
@@ -501,6 +544,14 @@ class LingQReader(arcade.Window):
         if self.nPageCurrent < self.nPages-1:
           self.wordSelectBox = None
           self.nPageCurrent += 1
+      
+      # Check for opening hud
+      if clickedOpenHud(x,y):
+        clickObject = 'openHud'
+        if self.showHud:
+          self.showHud = False
+        else:
+          self.showHud = True
       
       
     # If the click was on nothing, make sure no bubble
@@ -1740,7 +1791,7 @@ def clickedOpenHud(x,y):
   
   """Takes coordinate of click, determines if open hud button."""
   
-  if y > SCREEN_HEIGHT-MARGIN_HEIGHT:
+  if ( y > SCREEN_HEIGHT-MARGIN_HEIGHT ) and ( x > MARGIN_WIDTH ) and ( x < SCREEN_WIDTH-MARGIN_WIDTH ):
     return True
   
   return False
