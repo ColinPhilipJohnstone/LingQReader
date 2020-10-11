@@ -343,24 +343,20 @@ def MakeKnownWord(word):
 
 #=====================================================================================
 
-#def MakeAllKnown():
+def FinishLesson(contentId):
   
-  #"""Makes all unknown words in lesson known."""
+  """Finishes a lesson (including moving all words to known)."""
   
-  ## Set the URL for this task
-  #URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+LESSON+'/stats/'
+  # Set the URL for this task
+  URL = 'https://www.lingq.com/api/v2/'+LANGUAGE+'/lessons/'+str(contentId)+'/complete/'
   
-  #print(URL)
+  # Authorisation stuff
+  headers = { 'Authorization':'Token {}'.format(API_KEY) }
   
-  ## Authorisation stuff
-  #headers = { 'Authorization':'Token {}'.format(API_KEY) }
+  # Do post
+  r = requests.post(url=URL, headers=headers)
   
-  ## Do post
-  #r = requests.post(url=URL, headers=headers)
-  #print(r)
-  #print(r.json())
-  
-  #return
+  return
 
 #=====================================================================================
 

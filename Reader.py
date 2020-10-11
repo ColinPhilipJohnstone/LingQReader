@@ -538,6 +538,8 @@ class LingQReader(arcade.Window):
   
   def load_lesson(self,lesson):
     
+    """Loads a lesson."""
+    
     # Setup the lesson if this is not already loaded
     if not lesson['contentId'] == self.contentId:
       self.setup_lesson(lesson)
@@ -555,6 +557,8 @@ class LingQReader(arcade.Window):
   
   def return_to_menu(self):
     
+    """Returns to the menu."""
+    
     # Change from lesson to menu
     self.inMainMenu = True
     self.inLesson = False
@@ -568,7 +572,16 @@ class LingQReader(arcade.Window):
 
   def finish_lesson(self):
     
-    print("finishing")
+    """Finishes a lesson."""
+    
+    # Loop over all unknown words and set to known without changing them on LingQ
+    # make deepcopy of list first to not mess up loop as removing items from it
+    unknownList = copy.deepcopy(self.unknownList)
+    for word in unknownList:
+      self.makeUnknownKnown(word,changeRemote=False)
+    
+    # Finish the lesson on LingQ (including moving all to known)
+    lingqapi.FinishLesson(self.contentId)
     
     return
   
@@ -984,7 +997,7 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
-  def makeUnknownKnown(self,term):
+  def makeUnknownKnown(self,term,changeRemote=True):
     
     """Takes term, sets unknown word with this term to known."""
     
@@ -1008,8 +1021,9 @@ class LingQReader(arcade.Window):
       self.page_unknown_list[iPage] = unknown_sprite_list_new
       
     # Set to ignored online
-    wordid = self.unknownIdDict[term]
-    lingqapi.MakeKnownWord(wordid)
+    if changeRemote:
+      wordid = self.unknownIdDict[term]
+      lingqapi.MakeKnownWord(wordid)
 
     # Remove from unknown lists if it is there
     if term in self.unknownList:
