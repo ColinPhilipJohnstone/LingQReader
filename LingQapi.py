@@ -168,6 +168,8 @@ def GetLingQHintsList(word_list):
   
   """Retrieves hints for all words in a list of words."""
   
+  print(word_list)
+  
   # Set the URL for this task
   URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/hints/?'
   

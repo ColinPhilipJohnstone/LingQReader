@@ -722,6 +722,30 @@ class LingQReader(arcade.Window):
   
   def on_mouse_release(self, x, y, button, modifiers):
     
+    """Take mouse release, determine what to do."""
+    
+    # Call main menu or lesson
+    if self.inMainMenu:
+      self.on_mouse_release_mainmenu(x, y, button, modifiers)
+    elif self.inLesson:
+      self.on_mouse_release_lesson(x, y, button, modifiers)
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def on_mouse_release_mainmenu(self, x, y, button, modifiers):
+    
+    """Take mouse release, determine what to do if in main menu."""
+    
+    return
+  
+  #---------------------------------------------------------------
+
+  def on_mouse_release_lesson(self, x, y, button, modifiers):
+    
+    """Take mouse release, determine what to do if in lesson."""
+    
     # If clicking on status change button, remove bubble 
     if self.clickingStatus:
       self.displayBubble = None
