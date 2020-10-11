@@ -18,6 +18,7 @@ LANGUAGE = 'de'
 #LESSON = '35644' # shorter
 LESSON = '5113948' # really short
 
+
 # Dictionary for saving hints that have already been looked for
 unknown_hints = {}
 
@@ -70,7 +71,12 @@ def GetUnknownWords():
   for word in data:
     unknownList.append(word['word'])
   
-  return unknownList
+  # Get dictionary of id for each unknown word
+  unknownIdDict = {}
+  for word in data:
+    unknownIdDict[word['word']] = word['id']
+  
+  return unknownList , unknownIdDict
 
 #=====================================================================================
 
@@ -256,3 +262,52 @@ def IgnoreWord(word):
 
 
 #=====================================================================================
+
+def MakeKnownWord(word):
+  
+  """Marks a word as known."""
+  
+  # Set the URL for this task
+  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/known-words/'
+  
+  # Authorisation stuff
+  headers = { 'Authorization':'Token {}'.format(API_KEY) }
+  
+  # Params for creating the LingQ
+  params = { 'word':word , 'content_id':int(LESSON) }
+  
+  # Do post
+  r = requests.post(url=URL, headers=headers, data=params)
+  
+  # Make change without waiting for it to finish
+  #p = mp.Process(target=post,args=(URL,headers,params))
+  #p.daemon = True
+  #p.start()
+  
+  return
+
+
+#=====================================================================================
+
+def MakeAllKnown():
+  
+  """Makes all unknown words in lesson known."""
+  
+  # Set the URL for this task
+  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/lessons/'+LESSON+'/stats/'
+  
+  print(URL)
+  
+  # Authorisation stuff
+  headers = { 'Authorization':'Token {}'.format(API_KEY) }
+  
+  # Do post
+  r = requests.post(url=URL, headers=headers)
+  print(r)
+  print(r.json())
+  
+  return
+
+#=====================================================================================
+
+#https://www.lingq.com/api/languages/language/lessons/content_id/stats/
