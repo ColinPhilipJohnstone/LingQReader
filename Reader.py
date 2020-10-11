@@ -262,8 +262,7 @@ class LingQReader(arcade.Window):
     self.page_unknown_list = self.setup_unknown()
     
     # Setup HUD on page
-    self.exit_button_list = self.setup_page_hud()
-    self.hud_sprite_list , self.hud_shape_list = self.setup_page_hud()
+    self.setup_lesson_hud()
     
     # Start on first page
     self.nPageCurrent = 0
@@ -451,57 +450,50 @@ class LingQReader(arcade.Window):
   
   #---------------------------------------------------------------
   
-  def setup_page_hud(self):
-    
-    
-    #---------------------------
-    
-    # Make sprite and shape lists for hud
-    hud_sprite_list = arcade.SpriteList()
-    hud_shape_list = arcade.ShapeElementList()
+  def setup_lesson_hud(self):
     
     #---------------------------
     # Exit button
     
     # Get sprite
-    exit_sprite = arcade.Sprite("data/close_icon.png",EXIT_BUTTON_SCALING)
-    exit_sprite.center_x = MARGIN_WIDTH
-    exit_sprite.center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
-    hud_sprite_list.append(exit_sprite)
+    exit_button_sprite = arcade.Sprite("data/close_icon.png",EXIT_BUTTON_SCALING)
+    exit_button_sprite.center_x = MARGIN_WIDTH
+    exit_button_sprite.center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
     
     # Save the button sprite
-    self.exit_button_sprite = exit_sprite
+    self.exit_button_sprite = exit_button_sprite
     
     #---------------------------
     # Finish button
     
     # Get sprite
-    finish_sprite = arcade.Sprite("data/tick_icon.png",EXIT_BUTTON_SCALING)
-    finish_sprite.center_x = SCREEN_WIDTH - MARGIN_WIDTH
-    finish_sprite.center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
-    hud_sprite_list.append(finish_sprite)
+    finish_button_sprite = arcade.Sprite("data/tick_icon.png",EXIT_BUTTON_SCALING)
+    finish_button_sprite.center_x = SCREEN_WIDTH - MARGIN_WIDTH
+    finish_button_sprite.center_y = SCREEN_HEIGHT - 0.5*MARGIN_HEIGHT
     
     # Save the button sprite
-    self.finish_button_sprite = finish_sprite
+    self.finish_button_sprite = finish_button_sprite
     
     #---------------------------
     # Arrows
     
     # Get sprite for forward arrow
-    arrow_sprite = arcade.Sprite("data/forward_arrow_icon.png",ARROW_BUTTON_SCALING)
-    arrow_sprite.center_x = SCREEN_WIDTH - 0.5*MARGIN_WIDTH
-    arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
-    hud_sprite_list.append(arrow_sprite)
+    nextpage_arrow_sprite = arcade.Sprite("data/forward_arrow_icon.png",ARROW_BUTTON_SCALING)
+    nextpage_arrow_sprite.center_x = SCREEN_WIDTH - 0.5*MARGIN_WIDTH
+    nextpage_arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
     
     # Get sprite for backward arrow
-    arrow_sprite = arcade.Sprite("data/backward_arrow_icon.png",ARROW_BUTTON_SCALING)
-    arrow_sprite.center_x = 0.5*MARGIN_WIDTH
-    arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
-    hud_sprite_list.append(arrow_sprite)
+    lastpage_arrow_sprite = arcade.Sprite("data/backward_arrow_icon.png",ARROW_BUTTON_SCALING)
+    lastpage_arrow_sprite.center_x = 0.5*MARGIN_WIDTH
+    lastpage_arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
+    
+    # Save sprites
+    self.nextpage_arrow_sprite = nextpage_arrow_sprite
+    self.lastpage_arrow_sprite = lastpage_arrow_sprite
     
     #---------------------------
     
-    return hud_sprite_list , hud_shape_list
+    return 
   
   #---------------------------------------------------------------
   
@@ -723,22 +715,26 @@ class LingQReader(arcade.Window):
         if inBoxSprite(x,y,self.exit_button_sprite):
           self.return_to_menu()
       
-      # Check for finish button if hud is shown
+      # Check for finish button if hud is shown and on final page
       if self.showHud:
-        if inBoxSprite(x,y,self.finish_button_sprite):
-          self.finish_lesson()
+        if self.nPageCurrent == self.nPages-1:
+          if inBoxSprite(x,y,self.finish_button_sprite):
+            self.finish_lesson()
       
-      # Check for previous page
-      if clickedPreviousPage(x,y):
-        if self.nPageCurrent > 0:
-          self.wordSelectBox = None
-          self.nPageCurrent += -1
+      # Check for previous page button if not on first page
+      if self.nPageCurrent > 0:
+        if clickedPreviousPage(x,y):
+          if self.nPageCurrent > 0:
+            self.wordSelectBox = None
+            self.nPageCurrent += -1
           
-      # Check for next page
-      if clickedNextPage(x,y):
-        if self.nPageCurrent < self.nPages-1:
-          self.wordSelectBox = None
-          self.nPageCurrent += 1
+      # Check for next page if not on final page
+      
+      if self.nPageCurrent < self.nPages-1:
+        if clickedNextPage(x,y):
+          if self.nPageCurrent < self.nPages-1:
+            self.wordSelectBox = None
+            self.nPageCurrent += 1
       
       # Check for opening hud
       if clickedOpenHud(x,y):
@@ -748,7 +744,6 @@ class LingQReader(arcade.Window):
         else:
           self.showHud = True
       
-      
     # If the click was on nothing, make sure no bubble
     if clickObject is None:
       self.displayBubble = None
@@ -756,10 +751,6 @@ class LingQReader(arcade.Window):
     # If the click was in a bubble, remove bubble
     if clickObject == 'bubble':
       self.displayBubble = None
-    
-    # If anywhere but showHud, make sure hud is not shown
-    if not clickObject == 'openHud':
-      self.showHud = False
     
     return
   
@@ -1167,8 +1158,13 @@ class LingQReader(arcade.Window):
     
     # Display hud if required
     if self.showHud:
-      self.hud_sprite_list.draw()
-      self.hud_shape_list.draw()
+      self.exit_button_sprite.draw()
+      if self.nPageCurrent == self.nPages-1:
+        self.finish_button_sprite.draw()
+      if self.nPageCurrent < self.nPages-1:
+        self.nextpage_arrow_sprite.draw()
+      if self.nPageCurrent > 0:
+        self.lastpage_arrow_sprite.draw()
     
     # Display bubble if there is one
     if not self.displayBubble is None:
