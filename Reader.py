@@ -14,6 +14,8 @@ import requests
 import json
 import LingQapi as lingqapi
 import multiprocessing as mp
+import Buttons as buttons
+import arcade.color as color
 
 #=====================================================================================
 
@@ -108,6 +110,9 @@ class LingQReader(arcade.Window):
     # Assume no lesson loaded
     self.contentId = -1
     
+    # test button
+    self.testbutton = buttons.Button(400,400,width=100,height=100,backgroundColor=color.RED,outlineColor=color.BLACK)
+    
     return
   
   #---------------------------------------------------------------
@@ -150,15 +155,11 @@ class LingQReader(arcade.Window):
     """Set's up buttons in main menu."""
     
     #---------------------------
-    # Exit button
     
-    # Get sprite
-    exit_sprite = arcade.Sprite("data/close_icon.png",EXIT_BUTTON_SCALING)
-    exit_sprite.center_x = SCREEN_WIDTH/2
-    exit_sprite.center_y = int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))/2.0
-    
-    # Save the button sprite
-    self.menu_exit_button_sprite = exit_sprite
+    # Menu exit button
+    center_x = SCREEN_WIDTH/2
+    center_y = int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))/2.0
+    self.menu_exit = buttons.Button(center_x,center_y,imageFilename="data/close_icon.png",imageScale=EXIT_BUTTON_SCALING)
     
     #---------------------------
     # Lesson buttons
@@ -169,65 +170,95 @@ class LingQReader(arcade.Window):
     # Get center y of first lesson button
     center_y = SCREEN_HEIGHT - int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
     
-    # Make sprite and shape lists for buttons
-    lesson_sprite_list = arcade.SpriteList()
-    lesson_shape_list = arcade.ShapeElementList()
+    # Maximum widths of text
+    textWidthMax = int(SCREEN_WIDTH-2*MARGIN_WIDTH)
+    
+    # Get heights of button boxes
+    height = int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1)) *2.0/3.0
+    
+    # Start list of buttons
+    lesson_buttons = []
     
     # Loop over lessons to show
     for iLesson in range(0,NLESSONS_MENU):
       
-      # Get basic lesson data
+      # Title of lesson
       title = lessons[iLesson]['title']
       
-      # Start text to write
-      text = ''
-      
-      # Add lesson title to text
-      text += title
-      
-      # Made image out of word
-      image = get_text_image(text=text,font_size=FONT_SIZE_LESSON_LIST,width=int(SCREEN_WIDTH-2*MARGIN_WIDTH))
-      
-      # Make sprite from image
-      button_sprite = WordSprite()
-      button_sprite.SetWord(text)
-      button_sprite._texture = arcade.Texture(text)
-      button_sprite.texture.image = image
-      button_sprite.width = image.width
-      button_sprite.height = image.height
-      
-      # Set position of word
-      button_sprite.center_x = center_x
-      button_sprite.center_y = center_y
+      # Get this button
+      button = buttons.Button(center_x,center_y,textString=title,fontSize=FONT_SIZE_LESSON_LIST,widthTextMax=textWidthMax,
+                              backgroundColor=MENU_LESSON_BUTTON_COLOR,width=textWidthMax,height=height,outlineColor=color.BLACK)
       
       # Get center_y of next lesson
       center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
+      
+      # Append to list of lesson buttons
+      lesson_buttons.append(button)
     
-      # Add word to list
-      lesson_sprite_list.append(button_sprite)
+    # Save button list
+    self.lesson_buttons = lesson_buttons
       
-      # Make background shape
-      shape = arcade.create_rectangle_filled(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,MENU_LESSON_BUTTON_COLOR)
-      lesson_shape_list.append(shape)
+    #---------------------------
+    
+    ## Make sprite and shape lists for buttons
+    #lesson_sprite_list = arcade.SpriteList()
+    #lesson_shape_list = arcade.ShapeElementList()
+    
+    ## Loop over lessons to show
+    #for iLesson in range(0,NLESSONS_MENU):
       
-      # Outline of box
-      shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1)
-      lesson_shape_list.append(shape)
-      shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1,180.0)
-      lesson_shape_list.append(shape)
+      ## Get basic lesson data
+      #title = lessons[iLesson]['title']
       
-      # Do outline again if on final one
-      if iLesson == NLESSONS_MENU-1:
-        shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1)
-        lesson_shape_list.append(shape)
-        shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1,180.0)
-        lesson_shape_list.append(shape)
+      ## Start text to write
+      #text = ''
+      
+      ## Add lesson title to text
+      #text += title
+      
+      ## Made image out of word
+      #image = get_text_image(text=text,font_size=FONT_SIZE_LESSON_LIST,width=int(SCREEN_WIDTH-2*MARGIN_WIDTH))
+      
+      ## Make sprite from image
+      #button_sprite = WordSprite()
+      #button_sprite.SetWord(text)
+      #button_sprite._texture = arcade.Texture(text)
+      #button_sprite.texture.image = image
+      #button_sprite.width = image.width
+      #button_sprite.height = image.height
+      
+      ## Set position of word
+      #button_sprite.center_x = center_x
+      #button_sprite.center_y = center_y
+      
+      ## Get center_y of next lesson
+      #center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
+    
+      ## Add word to list
+      #lesson_sprite_list.append(button_sprite)
+      
+      ## Make background shape
+      #shape = arcade.create_rectangle_filled(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,MENU_LESSON_BUTTON_COLOR)
+      #lesson_shape_list.append(shape)
+      
+      ## Outline of box
+      #shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1)
+      #lesson_shape_list.append(shape)
+      #shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1,180.0)
+      #lesson_shape_list.append(shape)
+      
+      ## Do outline again if on final one
+      #if iLesson == NLESSONS_MENU-1:
+        #shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1)
+        #lesson_shape_list.append(shape)
+        #shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1,180.0)
+        #lesson_shape_list.append(shape)
     
     #---------------------------
     
-    # Save lists
-    self.lesson_sprite_list = lesson_sprite_list
-    self.lesson_shape_list = lesson_shape_list
+    ## Save lists
+    #self.lesson_sprite_list = lesson_sprite_list
+    #self.lesson_shape_list = lesson_shape_list
     
     #---------------------------
     
@@ -516,12 +547,12 @@ class LingQReader(arcade.Window):
     """Take mouse click, determine what to do if in main menu."""
     
     # Check for exit button
-    if inBoxSprite(x,y,self.menu_exit_button_sprite):
+    if self.menu_exit.inButton(x,y):
       sys.exit()
     
     # Check for each of the lessons
-    for iLesson in range(0,NLESSONS_MENU):
-      if inBoxSprite(x,y,self.lesson_sprite_list[iLesson]):
+    for iLesson in range(0,len(self.lesson_buttons)):
+      if self.lesson_buttons[iLesson].inButton(x,y):
         self.load_lesson(self.lessons[iLesson])
       
     return
@@ -1118,6 +1149,8 @@ class LingQReader(arcade.Window):
     # Start rendering
     arcade.start_render()
     
+    self.testbutton.draw()
+    
     # Determine if should draw main menu or lesson
     if self.inMainMenu:
       self.on_draw_mainmenu()
@@ -1133,11 +1166,14 @@ class LingQReader(arcade.Window):
     """For drawing main menu."""
     
     # Exit button
-    self.menu_exit_button_sprite.draw()
+    self.menu_exit.draw()
     
     # Lesson buttons
-    self.lesson_shape_list.draw()
-    self.lesson_sprite_list.draw()
+    for button in self.lesson_buttons:
+      button.draw()
+    
+    #self.lesson_shape_list.draw()
+    #self.lesson_sprite_list.draw()
     
     return 
   
