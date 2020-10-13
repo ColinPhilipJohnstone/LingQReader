@@ -28,7 +28,7 @@ import arcade.color as color
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 800
 SCREEN_TITLE = "Colin's LingQ Reader"
-FULLSCREEN = False
+FULLSCREEN = True
 
 # Main menu properties
 NLESSONS_MENU = 10
@@ -109,9 +109,6 @@ class LingQReader(arcade.Window):
     
     # Assume no lesson loaded
     self.contentId = -1
-    
-    # test button
-    self.testbutton = buttons.Button(400,400,width=100,height=100,backgroundColor=color.RED,outlineColor=color.BLACK)
     
     return
   
@@ -548,7 +545,7 @@ class LingQReader(arcade.Window):
     
     # Check for exit button
     if self.menu_exit.inButton(x,y):
-      sys.exit()
+      #sys.exit()
     
     # Check for each of the lessons
     for iLesson in range(0,len(self.lesson_buttons)):
@@ -1148,8 +1145,6 @@ class LingQReader(arcade.Window):
     
     # Start rendering
     arcade.start_render()
-    
-    self.testbutton.draw()
     
     # Determine if should draw main menu or lesson
     if self.inMainMenu:
