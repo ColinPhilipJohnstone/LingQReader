@@ -60,13 +60,14 @@ BUBBLE_HINT_SPACING = 30
 BUBBLE_STATUS_WIDTH = int(min(50,(BUBBLE_WIDTH-2*BUBBLE_MARGIN)/6.0))
 BUBBLE_STATUS_HEIGHT = BUBBLE_STATUS_WIDTH
 BUBBLE_MAX_HINTS = 3
+BUBBLE_OPEN_TIME = 3.0
 
 # Some HUD properties
 EXIT_BUTTON_SCALING = 0.15
 ARROW_BUTTON_SCALING = 0.15
 
 # Colors 
-LESSON_BACKGROUND_COLOR = arcade.color.WHITE
+LESSON_BACKGROUND_COLOR = (178,190,189,60)
 LINGQ_HIGHLIGHT_COLOR_1 = (255,255,0,255)
 LINGQ_HIGHLIGHT_COLOR_2 = (255,255,0,120)
 LINGQ_HIGHLIGHT_COLOR_3 = (255,255,0,55)
@@ -197,68 +198,6 @@ class LingQReader(arcade.Window):
       
     #---------------------------
     
-    ## Make sprite and shape lists for buttons
-    #lesson_sprite_list = arcade.SpriteList()
-    #lesson_shape_list = arcade.ShapeElementList()
-    
-    ## Loop over lessons to show
-    #for iLesson in range(0,NLESSONS_MENU):
-      
-      ## Get basic lesson data
-      #title = lessons[iLesson]['title']
-      
-      ## Start text to write
-      #text = ''
-      
-      ## Add lesson title to text
-      #text += title
-      
-      ## Made image out of word
-      #image = get_text_image(text=text,font_size=FONT_SIZE_LESSON_LIST,width=int(SCREEN_WIDTH-2*MARGIN_WIDTH))
-      
-      ## Make sprite from image
-      #button_sprite = WordSprite()
-      #button_sprite.SetWord(text)
-      #button_sprite._texture = arcade.Texture(text)
-      #button_sprite.texture.image = image
-      #button_sprite.width = image.width
-      #button_sprite.height = image.height
-      
-      ## Set position of word
-      #button_sprite.center_x = center_x
-      #button_sprite.center_y = center_y
-      
-      ## Get center_y of next lesson
-      #center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
-    
-      ## Add word to list
-      #lesson_sprite_list.append(button_sprite)
-      
-      ## Make background shape
-      #shape = arcade.create_rectangle_filled(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,MENU_LESSON_BUTTON_COLOR)
-      #lesson_shape_list.append(shape)
-      
-      ## Outline of box
-      #shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1)
-      #lesson_shape_list.append(shape)
-      #shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1,180.0)
-      #lesson_shape_list.append(shape)
-      
-      ## Do outline again if on final one
-      #if iLesson == NLESSONS_MENU-1:
-        #shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1)
-        #lesson_shape_list.append(shape)
-        #shape = arcade.create_rectangle_outline(button_sprite.center_x,button_sprite.center_y,button_sprite.width,button_sprite.height,arcade.color.BLACK,1,180.0)
-        #lesson_shape_list.append(shape)
-    
-    #---------------------------
-    
-    ## Save lists
-    #self.lesson_sprite_list = lesson_sprite_list
-    #self.lesson_shape_list = lesson_shape_list
-    
-    #---------------------------
-    
     return
   
   #---------------------------------------------------------------
@@ -306,6 +245,9 @@ class LingQReader(arcade.Window):
     
     # Assume no word select box to display 
     self.wordSelectBox = None
+    
+    # Make bubble timer as 0
+    self.BubbleTimer = 0
     
     return
   
@@ -545,7 +487,7 @@ class LingQReader(arcade.Window):
     
     # Check for exit button
     if self.menu_exit.inButton(x,y):
-      #sys.exit()
+      sys.exit()
     
     # Check for each of the lessons
     for iLesson in range(0,len(self.lesson_buttons)):
@@ -691,6 +633,9 @@ class LingQReader(arcade.Window):
             # Setup word select box on this one
             self.wordSelectBox = self.GetWordSelectBox(lingq_sprite)
             
+            # Start timer for closing
+            self.BubbleTimer = 0
+            
     # Loop over unknown words on screen if not found click
     if clickObject is None:
       for unknown_sprite in self.page_unknown_list[self.nPageCurrent]:
@@ -713,6 +658,9 @@ class LingQReader(arcade.Window):
           # Setup word select box on this one
           self.wordSelectBox = self.GetWordSelectBox(unknown_sprite)
             
+          # Start timer for closing
+          self.BubbleTimer = 0
+    
     # Loop over all words on screen if not found click
     if clickObject is None:
       for word_sprite in self.page_word_list[self.nPageCurrent]:
@@ -734,7 +682,11 @@ class LingQReader(arcade.Window):
           
           # Setup word select box on this one
           self.wordSelectBox = self.GetWordSelectBox(word_sprite)
-          
+    
+          # Start timer for closing
+          self.BubbleTimer = 0
+    
+    
     # Check for clicking buttons
     if clickObject is None:
       
@@ -1210,6 +1162,31 @@ class LingQReader(arcade.Window):
   #---------------------------------------------------------------
   
   def on_update(self,dt):
+    
+    # Call main menu or lesson
+    if self.inMainMenu:
+      self.on_update_mainmenu(dt)
+    elif self.inLesson:
+      self.on_update_lesson(dt)
+    
+    return
+    
+  #---------------------------------------------------------------
+  
+  def on_update_mainmenu(self,dt):
+    return
+  
+  #---------------------------------------------------------------
+  
+  def on_update_lesson(self,dt):
+    
+    # Update the bubble timer if a bubble is open
+    if not self.displayBubble is None:
+      self.BubbleTimer += dt
+    
+    # Kill bubble if been open too long
+    if self.BubbleTimer > BUBBLE_OPEN_TIME:
+      self.displayBubble = None
     
     return
   
