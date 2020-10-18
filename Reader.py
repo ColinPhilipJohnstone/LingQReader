@@ -188,7 +188,8 @@ class LingQReader(arcade.Window):
     course_buttons = []
     
     # Wikipedia lesson
-    button = buttons.Button(center_x,center_y,textString=WIKI_ARTICLE,fontSize=FONT_SIZE_LESSON_LIST,widthTextMax=textWidthMax,
+    title = 'Wiki: '+WIKI_ARTICLE
+    button = buttons.Button(center_x,center_y,textString=title,fontSize=FONT_SIZE_LESSON_LIST,widthTextMax=textWidthMax,
                               backgroundColor=MENU_LESSON_BUTTON_COLOR,width=textWidthMax,height=height,outlineColor=color.BLACK)
     center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
     course_buttons.append(button)
@@ -197,7 +198,7 @@ class LingQReader(arcade.Window):
     for iCourse in range(0,NLESSONS_MENU-1):
       
       # Title of lesson
-      title = courses[iCourse]['title']
+      title = 'Course: '+courses[iCourse]['title']
       
       # Get this button
       button = buttons.Button(center_x,center_y,textString=title,fontSize=FONT_SIZE_LESSON_LIST,widthTextMax=textWidthMax,
@@ -255,8 +256,12 @@ class LingQReader(arcade.Window):
     # Loop over lessons to show
     for iLesson in range(0,NLESSONS_MENU):
       
+      # Make sure not finished list
+      if iLesson >= len(lessons):
+        break
+      
       # Title of lesson
-      title = lessons[iLesson]['title']
+      title = 'Lesson: '+lessons[iLesson]['title']
       
       # Get this button
       button = buttons.Button(center_x,center_y,textString=title,fontSize=FONT_SIZE_LESSON_LIST,widthTextMax=textWidthMax,

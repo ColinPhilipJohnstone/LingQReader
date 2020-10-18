@@ -12,6 +12,8 @@ wiki.set_lang("de")
 
 MAX_WORD_LESSON = 1750
 
+# Collection to upload lessons to
+DEFAULT_COLLECTION = 713861
 #=====================================================================================
 
 def SetupWikiArticle(article):
@@ -30,6 +32,9 @@ def SetupWikiArticle(article):
   text = text.replace('.','\n')
   text = text.replace('AAAAA','. ')
   
+  # Remove a couple of things not needed
+  text = text.replace('&lt;\p&gt;','')
+  
   # Split the lesson
   text_lessons = SplitText(text)
   
@@ -37,13 +42,13 @@ def SetupWikiArticle(article):
   if len(text_lessons) > 1:
     titles = []
     for i in range(0,len(text_lessons)):
-      titles.append(title+' ---- ('+str(i)+')')
+      titles.append(title+' ('+str(i)+')')
   else:
     titles = [title]
   
   # Upload to LingQ
   for i in range(0,len(text_lessons)):
-    contentId = lingqapi.UploadLesson(titles[i],text_lessons[i])
+    contentId = lingqapi.UploadLesson(titles[i],text_lessons[i],DEFAULT_COLLECTION)
   
   # Open the lesson
   lingqapi.open_lesson(contentId)

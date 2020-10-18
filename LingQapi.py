@@ -27,7 +27,7 @@ URL_LENGTH_LIMIT = 2000
 unknown_hints = {}
 
 # Collection to upload lessons to
-DEFAULT_COLLECTION = 707874
+DEFAULT_COLLECTION = 713861
 
 #=====================================================================================
 
@@ -46,12 +46,6 @@ def GetCourses():
   
   # Get list of courses
   courses = r.json()
-  
-  #print(r)
-  #print(r.json())
-  #for item in r.json():
-    #print(item['title'])
-   #GET https://www.lingq.com/api/languages/language/courses/
   
   return courses
 
@@ -118,7 +112,6 @@ def GetText(contentId):
   data = r.json() 
   text = data['text']
   
-  print(text)
   # Do a simple replace
   text = text.replace('<p>','')
   text = text.replace('</p>',' </p> ')
@@ -412,9 +405,11 @@ def FinishLesson(contentId):
 
 #=====================================================================================
 
-def UploadLesson(title,content):
+def UploadLesson(title,content,collectionId):
   
   """Uploads a lesson"""
+  
+  print('upload - ',title)
   
   # Set the URL for this task
   URL = 'https://www.lingq.com/api/v2/'+LANGUAGE+'/lessons/'
@@ -423,8 +418,8 @@ def UploadLesson(title,content):
   headers = { 'Authorization':'Token {}'.format(API_KEY) , 'Content-Type':'application/json' }
   
   # Params for lesson
-  #params = { 'title':title , 'text':content , 'share_status':'private' , 'share_status':'private' , 'collection':DEFAULT_COLLECTION }
-  params = { 'title':title , 'text':content , 'share_status':'private' , 'share_status':'private' }
+  params = { 'title':title , 'text':content , 'share_status':'private' , 'share_status':'private' , 'collection':collectionId }
+  #params = { 'title':title , 'text':content , 'share_status':'private' , 'share_status':'private' }
   
   # Do post
   r = requests.post(url=URL, headers=headers, json=params)
