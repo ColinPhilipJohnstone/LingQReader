@@ -1,0 +1,127 @@
+.btn-cus{
+	background-color:#819D00 !important;
+}
+.btn-cus:hover{
+	background-color:#001e2d !important;
+}
+.header-group-list{
+	background-color: #fff;
+	border-left: 1px solid #DDD;
+	margin-right: -2px;
+	border-radius: 0;
+}
+.banner{
+	
+	text-align: center;
+	background-color: #fff;
+	
+	padding-bottom: 70px;
+	padding-top: 70px;
+}
+.search-header-btn {
+	background-color:#738F41;
+}
+div.autosuggest ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	width: 100%;
+	border-top: 0;
+	-webkit-box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	-moz-box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+div.autosuggest ul li {
+	margin: 0;
+	text-align: left;
+	text-transform: lowercase;
+}
+div.autosuggest ul li a {
+	display: block;
+	text-decoration: none;
+	position: relative;
+	padding: 4.5px 0 !important;
+	width: 100%;
+	color: #c0c2c6 !important;
+	text-indent: 14px;
+	font-size: 16px !important;
+}
+div.autosuggest ul li a .tl, div.autosuggest ul li a .tr {
+	width: 6px;
+	height: 6px;
+	position: absolute;
+	top: 0;
+	padding: 0;
+	margin: 0;
+}
+div.autosuggest ul li a span {
+	display: block;
+}
+.li-select{
+	background-color: #004971;
+}
+div.autosuggest ul li:hover a, .li-select{
+	background-color: #004971;
+}
+.scroll-top-wrapper {
+    position: fixed;
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
+    text-align: center;
+    z-index: 99999999;
+    background-color: #777777;
+    color: #eeeeee;
+    width: 50px;
+    height: 48px;
+    line-height: 48px;
+    right: 30px;
+    bottom: 80px;
+    padding-top: 2px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    -webkit-transition: all 0.5s ease-in-out;
+    -moz-transition: all 0.5s ease-in-out;
+    -ms-transition: all 0.5s ease-in-out;
+    -o-transition: all 0.5s ease-in-out;
+    transition: all 0.5s ease-in-out;
+}
+.scroll-top-wrapper:hover {
+    background-color: #888888;
+}
+.scroll-top-wrapper.show {
+    visibility:visible;
+    cursor:pointer;
+    opacity: 1.0;
+}
+.scroll-top-wrapper i.fa {
+    line-height: inherit;
+}
+.btn-fb-page {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+}
+
+.google-home{
+    padding-bottom: 20px;
+    
+}
+.google-search{
+	position: absolute;
+	right: 0;
+	padding-bottom: 20px;
+	z-index:;
+    margin: 20px;
+}
+.google-footer{
+	padding-bottom: 20px;
+	text-align:center;
+}
+.google-detail{
+	margin-top: 40px;
+}

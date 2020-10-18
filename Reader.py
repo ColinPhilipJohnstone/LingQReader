@@ -64,7 +64,7 @@ BUBBLE_MAX_HINTS = 3
 BUBBLE_OPEN_TIME = 3.0
 
 # Some HUD properties
-EXIT_BUTTON_SCALING = 0.15
+EXIT_BUTTON_SCALING = 0.1
 ARROW_BUTTON_SCALING = 0.15
 
 # Colors 
@@ -114,6 +114,8 @@ class LingQReader(arcade.Window):
     self.inCourseList = True
     self.inLesson = False
     self.loadedLessonList = False
+    self.menuCoursesPage = 0
+    self.menuLessonsPage = 0
     
     # Assume no lesson loaded
     self.contentId = -1
@@ -165,8 +167,10 @@ class LingQReader(arcade.Window):
     #---------------------------
     
     # Menu exit button
-    center_x = SCREEN_WIDTH/2
-    center_y = int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))/2.0
+    #center_x = SCREEN_WIDTH/2
+    #center_y = int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))/2.0
+    center_x = MARGIN_WIDTH/2
+    center_y = MARGIN_HEIGHT/2
     self.menu_exit = buttons.Button(center_x,center_y,imageFilename="data/close_icon.png",imageScale=EXIT_BUTTON_SCALING)
     
     #---------------------------
@@ -184,18 +188,21 @@ class LingQReader(arcade.Window):
     # Get heights of button boxes
     height = int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1)) *2.0/3.0
     
-    # Start list of buttons
+    # Start list of buttons for each page
     course_buttons = []
+    
+    # Start list of buttons for this page
+    course_buttons_page = []
     
     # Wikipedia lesson
     title = 'Wiki: '+WIKI_ARTICLE
     button = buttons.Button(center_x,center_y,textString=title,fontSize=FONT_SIZE_LESSON_LIST,widthTextMax=textWidthMax,
                               backgroundColor=MENU_LESSON_BUTTON_COLOR,width=textWidthMax,height=height,outlineColor=color.BLACK)
     center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
-    course_buttons.append(button)
+    course_buttons_page.append(button)
     
     # Loop over courses to show
-    for iCourse in range(0,NLESSONS_MENU-1):
+    for iCourse in range(0,len(courses)):
       
       # Title of lesson
       title = 'Course: '+courses[iCourse]['title']
@@ -208,17 +215,38 @@ class LingQReader(arcade.Window):
       center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
       
       # Append to list of lesson buttons
-      course_buttons.append(button)
+      course_buttons_page.append(button)
+      
+      # If enough on this page, start next page of buttons
+      if len(course_buttons_page) == NLESSONS_MENU:
+        course_buttons.append(course_buttons_page)
+        course_buttons_page = []
+        center_y = SCREEN_HEIGHT - int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
+    
+    # Save last page if not empty
+    if not course_buttons_page == []:
+      course_buttons.append(course_buttons_page)
     
     # Save button list
     self.course_buttons = course_buttons
     
     #---------------------------
-    # Arrow to go forward to a course
+    # Arrows
     
+    # Arrow to go forward to a course
     center_x = SCREEN_WIDTH - 0.5*MARGIN_WIDTH
     center_y = 0.5*SCREEN_HEIGHT
     self.menu_forward_button = buttons.Button(center_x,center_y,imageFilename="data/forward_arrow_icon.png",imageScale=ARROW_BUTTON_SCALING)
+    
+    # Arrow to scroll down in list
+    center_x = 0.5*SCREEN_WIDTH
+    center_y = 0.25*MARGIN_HEIGHT
+    self.menu_downward_button = buttons.Button(center_x,center_y,imageFilename="data/downward_arrow_icon.png",imageScale=ARROW_BUTTON_SCALING)
+    
+    # Arrow to scroll up in list
+    center_x = 0.5*SCREEN_WIDTH
+    center_y = SCREEN_HEIGHT-0.25*MARGIN_HEIGHT
+    self.menu_upward_button = buttons.Button(center_x,center_y,imageFilename="data/upward_arrow_icon.png",imageScale=ARROW_BUTTON_SCALING)
     
     #---------------------------
     
@@ -253,8 +281,11 @@ class LingQReader(arcade.Window):
     # Start list of buttons
     lesson_buttons = []
     
+    # Start list of buttons for page
+    lesson_buttons_page = []
+    
     # Loop over lessons to show
-    for iLesson in range(0,NLESSONS_MENU):
+    for iLesson in range(0,len(lessons)):
       
       # Make sure not finished list
       if iLesson >= len(lessons):
@@ -271,7 +302,17 @@ class LingQReader(arcade.Window):
       center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
       
       # Append to list of lesson buttons
-      lesson_buttons.append(button)
+      lesson_buttons_page.append(button)
+    
+      # If enough on this page, start next page of buttons
+      if len(lesson_buttons_page) == NLESSONS_MENU:
+        lesson_buttons.append(lesson_buttons_page)
+        lesson_buttons_page = []
+        center_y = SCREEN_HEIGHT - int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
+    
+    # Save last page if not empty
+    if not lesson_buttons_page == []:
+      lesson_buttons.append(lesson_buttons_page)
     
     # Save button list
     self.lesson_buttons = lesson_buttons
@@ -288,21 +329,10 @@ class LingQReader(arcade.Window):
     # Save the fact that lesson list loaded
     self.loadedLessonList = True
     
-    ## Get sprite for forward arrow
-    #nextpage_arrow_sprite = arcade.Sprite("data/forward_arrow_icon.png",ARROW_BUTTON_SCALING)
-    #nextpage_arrow_sprite.center_x = SCREEN_WIDTH - 0.5*MARGIN_WIDTH
-    #nextpage_arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
+    # Go back to first page on list
+    self.menuLessonsPage = 0
     
-    ## Get sprite for backward arrow
-    #lastpage_arrow_sprite = arcade.Sprite("data/backward_arrow_icon.png",ARROW_BUTTON_SCALING)
-    #lastpage_arrow_sprite.center_x = 0.5*MARGIN_WIDTH
-    #lastpage_arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
-    
-    ## Save sprites
-    #self.nextpage_arrow_sprite = nextpage_arrow_sprite
-    #self.lastpage_arrow_sprite = lastpage_arrow_sprite
-    
-    
+    #---------------------------
     
     return
   
@@ -598,21 +628,22 @@ class LingQReader(arcade.Window):
     
     # Check for the Wiki lesson 
     if self.inCourseList:
-      if self.course_buttons[0].inButton(x,y):
-        self.load_wiki_lesson()
-        return
+      if self.menuCoursesPage == 0:
+        if self.course_buttons[self.menuCoursesPage][0].inButton(x,y):
+          self.load_wiki_lesson()
+          return
     
     # Check for course button
     if self.inCourseList:
-      for iCourse in range(1,len(self.course_buttons)):
-        if self.course_buttons[iCourse].inButton(x,y):
+      for iCourse in range(0,len(self.course_buttons[self.menuCoursesPage])):
+        if self.course_buttons[self.menuCoursesPage][iCourse].inButton(x,y):
           self.load_course(self.courses[iCourse-1])
           return
         
     # Check for each of the lessons
     if not self.inCourseList:
-      for iLesson in range(0,len(self.lesson_buttons)):
-        if self.lesson_buttons[iLesson].inButton(x,y):
+      for iLesson in range(0,len(self.lesson_buttons[self.menuLessonsPage])):
+        if self.lesson_buttons[self.menuLessonsPage][iLesson].inButton(x,y):
           self.load_lesson(self.lessons[iLesson])
           return
     
@@ -628,6 +659,28 @@ class LingQReader(arcade.Window):
         self.inCourseList = False
         return
     
+    # Check for down in list if not on last page
+    if self.menu_downward_button.inButton(x,y):
+      if self.inCourseList:
+        if self.menuCoursesPage < len(self.course_buttons)-1:
+          self.menuCoursesPage += 1
+          return
+      else:
+        if self.menuLessonsPage < len(self.lesson_buttons)-1:
+          self.menuLessonsPage += 1
+          return
+    
+    # Check for up in list if not on first page
+    if self.menu_upward_button.inButton(x,y):
+      if self.inCourseList:
+        if self.menuCoursesPage > 0:
+          self.menuCoursesPage += -1
+          return
+      else:
+        if self.menuLessonsPage > 0:
+          self.menuLessonsPage += -1
+          return
+      
     return
   
   #---------------------------------------------------------------
@@ -1285,12 +1338,12 @@ class LingQReader(arcade.Window):
     
     # Course buttons
     if self.inCourseList:
-      for button in self.course_buttons:
+      for button in self.course_buttons[self.menuCoursesPage]:
         button.draw()
     
     # Lesson buttons
     if not self.inCourseList:
-      for button in self.lesson_buttons:
+      for button in self.lesson_buttons[self.menuLessonsPage]:
         button.draw()
     
     # Back to courses arrow
@@ -1301,6 +1354,22 @@ class LingQReader(arcade.Window):
     if self.inCourseList and self.loadedLessonList:
       self.menu_forward_button.draw()
     
+    # Down in list if not on last page
+    if self.inCourseList:
+      if self.menuCoursesPage < len(self.course_buttons)-1:
+        self.menu_downward_button.draw()
+    else:
+      if self.menuLessonsPage < len(self.lesson_buttons)-1:
+        self.menu_downward_button.draw()
+        
+    # Up in list if not on first page
+    if self.inCourseList:
+      if self.menuCoursesPage > 0:
+        self.menu_upward_button.draw()
+    else:
+      if self.menuLessonsPage > 0:
+        self.menu_upward_button.draw()
+      
     return 
   
   #---------------------------------------------------------------
