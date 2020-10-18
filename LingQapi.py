@@ -7,6 +7,7 @@ import requests
 import json
 import multiprocessing as mp
 import copy
+import sys
 
 # API key for my account
 API_KEY = "408fa561d040f932be1f3303e50e426794fda139"
@@ -24,6 +25,55 @@ URL_LENGTH_LIMIT = 2000
 
 # Dictionary for saving hints that have already been looked for
 unknown_hints = {}
+
+# Collection to upload lessons to
+DEFAULT_COLLECTION = 707874
+
+#=====================================================================================
+
+def GetCourses():
+  
+  """Returns courses being studied."""
+  
+  # Set the URL for this task
+  URL = 'https://www.lingq.com/api/languages/'+LANGUAGE+'/courses/'
+  
+  # Authorisation stuff
+  headers = {'Authorization': 'Token {}'.format(API_KEY)}
+  
+  # Request data
+  r = requests.get( url=URL , headers=headers )
+  
+  # Get list of courses
+  courses = r.json()
+  
+  #print(r)
+  #print(r.json())
+  #for item in r.json():
+    #print(item['title'])
+   #GET https://www.lingq.com/api/languages/language/courses/
+  
+  return courses
+
+#=====================================================================================
+
+def GetCourseLessons(courseId):
+  
+  """Returns lessons for a given course."""
+  
+  # Set the URL for this task
+  URL = 'https://www.lingq.com/api/v2/'+LANGUAGE+'/collections/'+str(courseId)+'/'
+  
+  # Authorisation stuff
+  headers = {'Authorization': 'Token {}'.format(API_KEY)}
+  
+  # Request data
+  r = requests.get( url=URL , headers=headers )
+  
+  # Get list of lessons
+  lessons = r.json()['lessons']
+  
+  return lessons
 
 #=====================================================================================
 
@@ -68,9 +118,11 @@ def GetText(contentId):
   data = r.json() 
   text = data['text']
   
+  print(text)
   # Do a simple replace
   text = text.replace('<p>','')
   text = text.replace('</p>',' </p> ')
+  
   
   return text
 
@@ -360,4 +412,46 @@ def FinishLesson(contentId):
 
 #=====================================================================================
 
-#https://www.lingq.com/api/languages/language/lessons/content_id/stats/
+def UploadLesson(title,content):
+  
+  """Uploads a lesson"""
+  
+  # Set the URL for this task
+  URL = 'https://www.lingq.com/api/v2/'+LANGUAGE+'/lessons/'
+  
+  # Authorisation stuff
+  headers = { 'Authorization':'Token {}'.format(API_KEY) , 'Content-Type':'application/json' }
+  
+  # Params for lesson
+  #params = { 'title':title , 'text':content , 'share_status':'private' , 'share_status':'private' , 'collection':DEFAULT_COLLECTION }
+  params = { 'title':title , 'text':content , 'share_status':'private' , 'share_status':'private' }
+  
+  # Do post
+  r = requests.post(url=URL, headers=headers, json=params)
+  
+  # Get content ID
+  contentId = r.json()['contentId']
+  
+  return contentId
+
+#=====================================================================================
+
+def open_lesson(contentId):
+  
+  """Opens a lesson for studying"""
+  
+  # Set the URL for this task
+  URL = 'https://www.lingq.com/api/study/'
+  
+  # Authorisation stuff
+  headers = { 'Authorization':'Token {}'.format(API_KEY) }
+  
+  # Params for lesson
+  params = { 'content_id':contentId }
+  
+  # Do post
+  r = requests.post(url=URL, headers=headers, data=params)
+    
+  return
+
+#=====================================================================================

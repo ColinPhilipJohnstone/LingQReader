@@ -16,6 +16,7 @@ import LingQapi as lingqapi
 import multiprocessing as mp
 import Buttons as buttons
 import arcade.color as color
+import Wikipedia as wiki
 
 #=====================================================================================
 
@@ -28,7 +29,7 @@ import arcade.color as color
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 800
 SCREEN_TITLE = "Colin's LingQ Reader"
-FULLSCREEN = True
+FULLSCREEN = False
 
 # Main menu properties
 NLESSONS_MENU = 10
@@ -87,6 +88,10 @@ lingq_images_save = {}
 unknown_images_save = {}
 
 
+WIKI_ARTICLE = "Genie_(Wolfskind)"
+
+
+
 #=====================================================================================
 
 class LingQReader(arcade.Window):
@@ -106,7 +111,9 @@ class LingQReader(arcade.Window):
     
     # Assume in main menu to start
     self.inMainMenu = True
+    self.inCourseList = True
     self.inLesson = False
+    self.loadedLessonList = False
     
     # Assume no lesson loaded
     self.contentId = -1
@@ -138,17 +145,20 @@ class LingQReader(arcade.Window):
     
     """Sets up the main menu."""
     
-    # Get lessons for this language
-    self.lessons = lingqapi.GetRecentLessons(NLESSONS_MENU)
+    # Get courses for this language
+    self.courses = lingqapi.GetCourses()
+    
+    ## Get lessons for this language
+    #self.lessons = lingqapi.GetRecentLessons(NLESSONS_MENU)
     
     # Setup sprite and shape lists for main menu
-    self.setup_menu_lesson_list(self.lessons)
+    self.setup_menu_course_list(self.courses)
     
     return
   
   #---------------------------------------------------------------
   
-  def setup_menu_lesson_list(self,lessons):
+  def setup_menu_course_list(self,courses):
     
     """Set's up buttons in main menu."""
     
@@ -158,6 +168,71 @@ class LingQReader(arcade.Window):
     center_x = SCREEN_WIDTH/2
     center_y = int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))/2.0
     self.menu_exit = buttons.Button(center_x,center_y,imageFilename="data/close_icon.png",imageScale=EXIT_BUTTON_SCALING)
+    
+    #---------------------------
+    # Courses list
+    
+    # Get center x position of buttons
+    center_x = 0.5*SCREEN_WIDTH
+    
+    # Get center y of first lesson button
+    center_y = SCREEN_HEIGHT - int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
+    
+    # Maximum widths of text
+    textWidthMax = int(SCREEN_WIDTH-2*MARGIN_WIDTH)
+    
+    # Get heights of button boxes
+    height = int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1)) *2.0/3.0
+    
+    # Start list of buttons
+    course_buttons = []
+    
+    # Wikipedia lesson
+    button = buttons.Button(center_x,center_y,textString=WIKI_ARTICLE,fontSize=FONT_SIZE_LESSON_LIST,widthTextMax=textWidthMax,
+                              backgroundColor=MENU_LESSON_BUTTON_COLOR,width=textWidthMax,height=height,outlineColor=color.BLACK)
+    center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
+    course_buttons.append(button)
+    
+    # Loop over courses to show
+    for iCourse in range(0,NLESSONS_MENU-1):
+      
+      # Title of lesson
+      title = courses[iCourse]['title']
+      
+      # Get this button
+      button = buttons.Button(center_x,center_y,textString=title,fontSize=FONT_SIZE_LESSON_LIST,widthTextMax=textWidthMax,
+                              backgroundColor=MENU_LESSON_BUTTON_COLOR,width=textWidthMax,height=height,outlineColor=color.BLACK)
+      
+      # Get center_y of next lesson
+      center_y += -int(float(SCREEN_HEIGHT)/float(NLESSONS_MENU+1))
+      
+      # Append to list of lesson buttons
+      course_buttons.append(button)
+    
+    # Save button list
+    self.course_buttons = course_buttons
+    
+    #---------------------------
+    # Arrow to go forward to a course
+    
+    center_x = SCREEN_WIDTH - 0.5*MARGIN_WIDTH
+    center_y = 0.5*SCREEN_HEIGHT
+    self.menu_forward_button = buttons.Button(center_x,center_y,imageFilename="data/forward_arrow_icon.png",imageScale=ARROW_BUTTON_SCALING)
+    
+    #---------------------------
+    
+    # Save the fact that lesson list loaded
+    self.loadedLessonList = True
+    
+    #---------------------------
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def setup_menu_lesson_list(self,lessons):
+    
+    """Set's up buttons in main menu."""
     
     #---------------------------
     # Lesson buttons
@@ -195,8 +270,34 @@ class LingQReader(arcade.Window):
     
     # Save button list
     self.lesson_buttons = lesson_buttons
-      
+    
     #---------------------------
+    # Arrow to go back to courses
+    
+    center_x = 0.5*MARGIN_WIDTH
+    center_y = 0.5*SCREEN_HEIGHT
+    self.menu_back_button = buttons.Button(center_x,center_y,imageFilename="data/backward_arrow_icon.png",imageScale=ARROW_BUTTON_SCALING)
+    
+    #---------------------------
+    
+    # Save the fact that lesson list loaded
+    self.loadedLessonList = True
+    
+    ## Get sprite for forward arrow
+    #nextpage_arrow_sprite = arcade.Sprite("data/forward_arrow_icon.png",ARROW_BUTTON_SCALING)
+    #nextpage_arrow_sprite.center_x = SCREEN_WIDTH - 0.5*MARGIN_WIDTH
+    #nextpage_arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
+    
+    ## Get sprite for backward arrow
+    #lastpage_arrow_sprite = arcade.Sprite("data/backward_arrow_icon.png",ARROW_BUTTON_SCALING)
+    #lastpage_arrow_sprite.center_x = 0.5*MARGIN_WIDTH
+    #lastpage_arrow_sprite.center_y = 0.5*SCREEN_HEIGHT
+    
+    ## Save sprites
+    #self.nextpage_arrow_sprite = nextpage_arrow_sprite
+    #self.lastpage_arrow_sprite = lastpage_arrow_sprite
+    
+    
     
     return
   
@@ -486,14 +587,75 @@ class LingQReader(arcade.Window):
     """Take mouse click, determine what to do if in main menu."""
     
     # Check for exit button
-    if self.menu_exit.inButton(x,y):
-      sys.exit()
+    if self.inCourseList:
+      if self.menu_exit.inButton(x,y):
+        sys.exit()
     
+    # Check for the Wiki lesson 
+    if self.inCourseList:
+      if self.course_buttons[0].inButton(x,y):
+        self.load_wiki_lesson()
+        return
+    
+    # Check for course button
+    if self.inCourseList:
+      for iCourse in range(1,len(self.course_buttons)):
+        if self.course_buttons[iCourse].inButton(x,y):
+          self.load_course(self.courses[iCourse-1])
+          return
+        
     # Check for each of the lessons
-    for iLesson in range(0,len(self.lesson_buttons)):
-      if self.lesson_buttons[iLesson].inButton(x,y):
-        self.load_lesson(self.lessons[iLesson])
-      
+    if not self.inCourseList:
+      for iLesson in range(0,len(self.lesson_buttons)):
+        if self.lesson_buttons[iLesson].inButton(x,y):
+          self.load_lesson(self.lessons[iLesson])
+          return
+    
+    # Check for back to courses button
+    if not self.inCourseList:
+      if self.menu_back_button.inButton(x,y):
+        self.inCourseList = True
+        return
+        
+    # Check for forward to a course button
+    if self.inCourseList and self.loadedLessonList:
+      if self.menu_forward_button.inButton(x,y):
+        self.inCourseList = False
+        return
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def load_wiki_lesson(self):
+    
+    # Setup the lesson
+    contentId = wiki.SetupWikiArticle(WIKI_ARTICLE)
+    
+    # Make a dictionary with the article id
+    lesson = {}
+    lesson['contentId'] = contentId
+    
+    # Reload the menu
+    self.setup_menu()
+    
+    return
+  
+  #---------------------------------------------------------------
+  
+  def load_course(self,course):
+    
+    """Loads a course."""
+    
+    # Load the list of lessons
+    self.lessons = lingqapi.GetCourseLessons(course['id'])
+    
+    # Setup the lesson list
+    self.setup_menu_lesson_list(self.lessons)
+    
+    # Change flag to display lessons
+    self.inCourseList = False
+    
     return
   
   #---------------------------------------------------------------
@@ -1113,14 +1275,26 @@ class LingQReader(arcade.Window):
     """For drawing main menu."""
     
     # Exit button
-    self.menu_exit.draw()
+    if self.inCourseList:
+      self.menu_exit.draw()
+    
+    # Course buttons
+    if self.inCourseList:
+      for button in self.course_buttons:
+        button.draw()
     
     # Lesson buttons
-    for button in self.lesson_buttons:
-      button.draw()
+    if not self.inCourseList:
+      for button in self.lesson_buttons:
+        button.draw()
     
-    #self.lesson_shape_list.draw()
-    #self.lesson_sprite_list.draw()
+    # Back to courses arrow
+    if not self.inCourseList:
+      self.menu_back_button.draw()
+    
+    # Forward to course arrow
+    if self.inCourseList and self.loadedLessonList:
+      self.menu_forward_button.draw()
     
     return 
   
